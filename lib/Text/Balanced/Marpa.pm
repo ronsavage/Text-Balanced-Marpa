@@ -131,10 +131,10 @@ lexeme default			= latm => 1
 
 :start					::= input_text
 
-input_text				::= string+
+input_text				::= input_string*
 
-string					::= char_string
-							| quoted_text
+input_string			::= quoted_text
+							| unquoted_text
 
 quoted_text				::=   open_angle	input_text	close_angle
 							| open_brace	input_text	close_brace
@@ -142,13 +142,11 @@ quoted_text				::=   open_angle	input_text	close_angle
 							| open_double	input_text	close_double
 							| open_paren	input_text	close_paren
 
+unquoted_text			::= string
+
 # Lexemes in alphabetical order.
 
 bracket_char			~ [<>{}\[\]"()]		# Use " in comment for UltraEdit.
-
-:lexeme					~ char_string		pause => before		event => char_string
-char_string				~ escaped_string
-							| unescaped_string
 
 :lexeme					~ close_angle		pause => before		event => close_angle
 close_angle				~ '>'
@@ -165,7 +163,7 @@ close_double			~ '"'
 :lexeme					~ close_paren		pause => before		event => close_paren
 close_paren				~ ')'
 
-escaped_string			~ '\' bracket_char	# Use ' in comment for UltraEdit.
+escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
 :lexeme					~ open_angle		pause => before		event => open_angle
 open_angle				~ '<'
@@ -181,6 +179,10 @@ open_double				~ '"'
 
 :lexeme					~ open_paren		pause => before		event => open_paren
 open_paren				~ '('
+
+:lexeme					~ string			pause => before		event => string
+string					~ escaped_char
+							| unescaped_string
 
 unescaped_string		~ [^<>{}\[\]"()]+	# Use " in comment for UltraEdit.
 
@@ -338,18 +340,14 @@ sub _process
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
 
-		if ( ($last_event ne '') && ($last_event eq 'char_string') )
+		if ( ($last_event ne '') && ($last_event eq 'string') )
 		{
-			$self -> _add_daughter('char_string', {text => $char_string});
+			$self -> _add_daughter('string', {text => $char_string});
 
 			$char_string = '';
 		}
 
-		if ($event_name eq 'char_string')
-		{
-			$char_string .= $lexeme;
-		}
-		elsif ($event_name eq 'close_angle')
+		if ($event_name eq 'close_angle')
 		{
 			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
@@ -399,13 +397,17 @@ sub _process
 			$self -> _add_daughter($event_name, {text => $lexeme});
 			$self -> _push_stack;
 		}
+		elsif ($event_name eq 'string')
+		{
+			$char_string .= $lexeme;
+		}
 
 		$last_event = $event_name;
     }
 
-	if ($last_event eq 'char_string')
+	if ($last_event eq 'string')
 	{
-		$self -> _add_daughter('char_string', {text => $char_string});
+		$self -> _add_daughter('string', {text => $char_string});
 	}
 
 	if (my $ambiguous_status = $self -> recce -> ambiguous)
@@ -534,7 +536,7 @@ sub _validate_event
 			')'        => 'open_paren',
 		);
 
-		if ($event_name{char_string})
+		if ($event_name{string})
 		{
 			$event_name = $special_case{$lexeme};
 
@@ -542,7 +544,7 @@ sub _validate_event
 		}
 		else
 		{
-			die "The code only handles 1 event at a time, or ('char_string', 'any others'). \n";
+			die "The code only handles 1 event at a time, or ('string', 'and others'). \n";
 		}
 	}
 
