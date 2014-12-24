@@ -165,22 +165,20 @@ paren_item				::= string
 
 # Lexemes in alphabetical order.
 
-angle_non_bracket		~ [^<>]+
+angle_set				~ [<>]
 
-angle_unquoted			~ escaped_char
-							| angle_non_bracket
+angle_unquoted			~ escaped_angle_set
+							| non_angle_set
 
-bracket_set				~ [<>{}()"]			# Use " in comment for UltraEdit.
+brace_set				~ [{}]
 
-brace_non_bracket		~ [^{}]+
+brace_unquoted			~ escaped_brace_set
+							| non_brace_set
 
-brace_unquoted			~ escaped_char
-							| brace_non_bracket
+bracket_set				~ [\[\]]
 
-bracket_non_bracket		~ [^\[\]]+
-
-bracket_unquoted		~ escaped_char
-							| bracket_non_bracket
+bracket_unquoted		~ escaped_bracket_set
+							| non_bracket_set
 
 :lexeme					~ char_string		pause => before		event => char_string
 char_string				~ [[:print:]]
@@ -200,13 +198,30 @@ close_double			~ '"'
 :lexeme					~ close_paren		pause => before		event => close_paren
 close_paren				~ ')'
 
-double_non_bracket		~ [^"]+				# Use " in comment for UltraEdit.
+double_set				~ ["]				# Use " in comment for UltraEdit.
 
-double_unquoted			~ escaped_char
-							| double_non_bracket
+double_unquoted			~ escaped_double_set
+							| non_double_set
 
+escaped_angle_set		~ '\' angle_set		# Use ' in comment for UltraEdit.
 
-escaped_char			~ '\' bracket_set	# Use ' in comment for UltraEdit.
+escaped_brace_set		~ '\' brace_set		# Use ' in comment for UltraEdit.
+
+escaped_bracket_set		~ '\' bracket_set	# Use ' in comment for UltraEdit.
+
+escaped_double_set		~ '\' double_set	# Use ' in comment for UltraEdit.
+
+escaped_paren_set		~ '\' paren_set		# Use ' in comment for UltraEdit.
+
+non_angle_set			~ [^<>]+
+
+non_brace_set			~ [^{}]+
+
+non_bracket_set			~ [^\[\]]+
+
+non_double_set			~ [^"]+				# Use " in comment for UltraEdit.
+
+non_paren_set			~ [^()]+
 
 :lexeme					~ open_angle		pause => before		event => open_angle
 open_angle				~ '<'
@@ -223,10 +238,10 @@ open_double				~ '"'
 :lexeme					~ open_paren		pause => before		event => open_paren
 open_paren				~ '('
 
-paren_non_bracket		~ [^()]+
+paren_set				~ [()]
 
-paren_unquoted			~ escaped_char
-							| paren_non_bracket
+paren_unquoted			~ escaped_paren_set
+							| non_paren_set
 
 END_OF_GRAMMAR
 	);
