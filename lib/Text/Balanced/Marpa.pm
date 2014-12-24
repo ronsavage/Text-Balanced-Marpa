@@ -65,19 +65,19 @@ has minlevel =>
 	required => 0,
 );
 
+has node_stack =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
+	required => 0,
+);
+
 has recce =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
 	isa      => Any,
-	required => 0,
-);
-
-has stack =>
-(
-	default  => sub{return []},
-	is       => 'rw',
-	isa      => ArrayRef,
 	required => 0,
 );
 
@@ -165,6 +165,8 @@ close_paren				~ ')'
 
 escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
+non_quote_char			~ [^<>{}\[\]"()]	# Use " in comment for UltraEdit.
+
 :lexeme					~ open_angle		pause => before		event => open_angle
 open_angle				~ '<'
 
@@ -182,9 +184,7 @@ open_paren				~ '('
 
 :lexeme					~ string			pause => before		event => string
 string					~ escaped_char
-							| unescaped_string
-
-unescaped_string		~ [^<>{}\[\]"()]+	# Use " in comment for UltraEdit.
+							| non_quote_char
 
 END_OF_GRAMMAR
 	);
@@ -215,7 +215,7 @@ sub _add_daughter
 	my($self, $name, $attributes)  = @_;
 	$attributes ||= {};
 	my($node)   = Tree::DAG_Node -> new({name => $name, attributes => $attributes});
-	my($stack)  = $self -> stack;
+	my($stack)  = $self -> node_stack;
 
 	$$stack[$#$stack] -> add_daughter($node);
 
@@ -286,28 +286,28 @@ sub next_few_chars
 
 # ------------------------------------------------
 
-sub _pop_stack
+sub _pop_node_stack
 {
 	my($self)  = @_;
-	my($stack) = $self -> stack;
+	my($stack) = $self -> node_stack;
 
 	pop @$stack;
 
-	$self -> stack($stack);
+	$self -> node_stack($stack);
 
-} # End of _pop_stack.
+} # End of _pop_node_stack.
 
 # ------------------------------------------------
 
 sub _process
 {
-	my($self)          = @_;
-	my($string)        = $self -> text;
-	my($length)        = length $string;
-	my($char_string)   = '';
-	my($format)        = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
-	my($last_event)    = '';
-	my($pos)           = 0;
+	my($self)       = @_;
+	my($string)     = $self -> text;
+	my($length)     = length $string;
+	my($text)       = '';
+	my($format)     = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
+	my($last_event) = '';
+	my($pos)        = 0;
 
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
@@ -340,74 +340,76 @@ sub _process
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
 
-		if ( ($last_event ne '') && ($last_event eq 'string') )
+		if ($event_name ne 'string')
 		{
-			$self -> _add_daughter('string', {text => $char_string});
+			$self -> _save_text($text);
 
-			$char_string = '';
+			$text = '';
 		}
 
 		if ($event_name eq 'close_angle')
 		{
-			$self -> _pop_stack;
+			$self -> _pop_node_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_brace')
 		{
-			$self -> _pop_stack;
+			$self -> _pop_node_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_bracket')
 		{
-			$self -> _pop_stack;
+			$self -> _pop_node_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_double')
 		{
-			$self -> _pop_stack;
+			$self -> _pop_node_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_paren')
 		{
-			$self -> _pop_stack;
+			$self -> _pop_node_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_angle')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
-			$self -> _push_stack;
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'open_brace')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
-			$self -> _push_stack;
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'open_bracket')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
-			$self -> _push_stack;
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'open_double')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
-			$self -> _push_stack;
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'open_paren')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
-			$self -> _push_stack;
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'string')
 		{
-			$char_string .= $lexeme;
+			$text .= $lexeme;
 		}
 
 		$last_event = $event_name;
     }
 
-	if ($last_event eq 'string')
+	# Mop up any left-over chars.
+
+	if ($text ne '')
 	{
-		$self -> _add_daughter('string', {text => $char_string});
+		$self -> _add_daughter('string', {text => $text});
 	}
 
 	if (my $ambiguous_status = $self -> recce -> ambiguous)
@@ -427,15 +429,15 @@ sub _process
 
 # ------------------------------------------------
 
-sub _push_stack
+sub _push_node_stack
 {
 	my($self)      = @_;
-	my($stack)     = $self -> stack;
+	my($stack)     = $self -> node_stack;
 	my(@daughters) = $$stack[$#$stack] -> daughters;
 
 	push @$stack, $daughters[$#daughters];
 
-} # End of _push_stack.
+} # End of _push_node_stack.
 
 # ------------------------------------------------
 
@@ -453,11 +455,11 @@ sub run
 		})
 	);
 
-	# Since $self -> stack has not been initialized yet,
+	# Since $self -> node_stack has not been initialized yet,
 	# we can't call _add_daughter() until after this statement.
 
 	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {} }));
-	$self -> stack([$self -> tree -> root]);
+	$self -> node_stack([$self -> tree -> root]);
 
 	# Return 0 for success and 1 for failure.
 
@@ -495,6 +497,18 @@ sub run
 	return $result;
 
 } # End of run.
+
+# ------------------------------------------------
+
+sub _save_text
+{
+	my($self, $text) = @_;
+
+	$self -> _add_daughter('string', {text => $text}) if (length($text) );
+
+	return '';
+
+} # End of _save_text.
 
 # ------------------------------------------------
 
