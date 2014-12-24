@@ -361,6 +361,19 @@ sub next_few_chars
 
 # ------------------------------------------------
 
+sub _pop_stack
+{
+	my($self)  = @_;
+	my($stack) = $self -> stack;
+
+	pop @$stack;
+
+	$self -> stack($stack);
+
+} # End of _pop_stack.
+
+# ------------------------------------------------
+
 sub _process
 {
 	my($self)          = @_;
@@ -407,43 +420,53 @@ sub _process
 		}
 		elsif ($event_name eq 'close_angle')
 		{
+			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_brace')
 		{
+			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_bracket')
 		{
+			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_double')
 		{
+			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_paren')
 		{
+			$self -> _pop_stack;
 			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_angle')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
+			$self -> _push_stack;
 		}
 		elsif ($event_name eq 'open_brace')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
+			$self -> _push_stack;
 		}
 		elsif ($event_name eq 'open_bracket')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
+			$self -> _push_stack;
 		}
 		elsif ($event_name eq 'open_double')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
+			$self -> _push_stack;
 		}
 		elsif ($event_name eq 'open_paren')
 		{
 			$self -> _add_daughter($event_name, {text => $lexeme});
+			$self -> _push_stack;
 		}
 
 		$last_event = $event_name;
@@ -463,6 +486,18 @@ sub _process
 	return $self -> recce -> value;
 
 } # End of _process.
+
+# ------------------------------------------------
+
+sub _push_stack
+{
+	my($self)      = @_;
+	my($stack)     = $self -> stack;
+	my(@daughters) = $$stack[$#$stack] -> daughters;
+
+	push @$stack, $daughters[$#daughters];
+
+} # End of _push_stack.
 
 # ------------------------------------------------
 
