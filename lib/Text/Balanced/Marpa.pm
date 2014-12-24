@@ -162,7 +162,7 @@ close_delim				~ ["]				# Use " in comment for UltraEdit.
 
 escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
-non_quote_char			~ [^%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
+non_quote_char			~ [^%:<>{}\[\]()"]+	# Use " in comment for UltraEdit.
 
 :lexeme					~ open_delim		pause => before		event => open_delim
 open_delim				~ '[%'
