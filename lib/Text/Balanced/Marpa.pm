@@ -73,14 +73,6 @@ has node_stack =>
 	required => 0,
 );
 
-has quote_count =>
-(
-	default  => sub{return 0},
-	is       => 'rw',
-	isa      => Int,
-	required => 0,
-);
-
 has recce =>
 (
 	default  => sub{return ''},
@@ -158,7 +150,7 @@ unquoted_text			::= string
 
 # Lexemes in alphabetical order.
 
-bracket_char			~ [%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
+bracket_char			~ [%:<>{}\[\]()"']	# Use " in comment for UltraEdit.
 
 :lexeme					~ close_delim		pause => before		event => close_delim
 close_delim				~ '%]'
@@ -168,6 +160,7 @@ close_delim				~ [}]
 close_delim				~ [\]]
 close_delim				~ [)]
 close_delim				~ ["]				# Use " in comment for UltraEdit.
+close_delim				~ [']				# Use ' in comment for UltraEdit.
 
 escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
@@ -176,7 +169,7 @@ escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 # character is no longer recognized as being escaped.
 # Trapping the exception then generated would be possible.
 
-non_quote_char			~ [^%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
+non_quote_char			~ [^%:<>{}\[\]()"']	# Use " in comment for UltraEdit.
 
 :lexeme					~ open_delim		pause => before		event => open_delim
 open_delim				~ '[%'
@@ -186,6 +179,7 @@ open_delim				~ [{]
 open_delim				~ [\[]
 open_delim				~ [(]
 open_delim				~ ["]				# Use " in comment for UltraEdit.
+open_delim				~ [']				# Use ' in comment for UltraEdit.
 
 :lexeme					~ string			pause => before		event => string
 string					~ escaped_char
@@ -394,18 +388,16 @@ sub _process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
+		$stats                     = $self -> stats;
 		($start, $span)            = $self -> recce -> pause_span;
-		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos);
+		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $stats);
 		$lexeme                    = $self -> recce -> literal($start, $span);
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
-		#$stats                     = $self -> stats;
 
 		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
-
-		$self -> quote_count($self -> quote_count + 1) if ($lexeme eq '"');
 
 		if ($event_name ne 'string')
 		{
@@ -419,20 +411,18 @@ sub _process
 			$self -> _pop_node_stack;
 			$self -> _add_daughter('close', {text => $lexeme});
 
-			# We could keep stats on delimiter frequency to diagnose errors.
+			$$stats{$lexeme}++;
 
-			#$$stats{$lexeme}++;
-
-			#$self -> stats($stats);
+			$self -> stats($stats);
 		}
 		elsif ($event_name eq 'open_delim')
 		{
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 
-			#$$stats{$lexeme}++;
+			$$stats{$lexeme}++;
 
-			#$self -> stats($stats);
+			$self -> stats($stats);
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -489,7 +479,7 @@ sub _save_text
 
 sub _validate_event
 {
-	my($self, $string, $start, $span, $pos) = @_;
+	my($self, $string, $start, $span, $pos, $stats) = @_;
 	my(@event)         = @{$self -> recce -> events};
 	my($event_count)   = scalar @event;
 	my(@event_name)    = sort map{$$_[0]} @event;
@@ -515,29 +505,35 @@ sub _validate_event
 	{
 		my(%special_case) =
 		(
-			'>'        => 'close',
-			'}'        => 'close',
-			']'        => 'close',
-			')'        => 'close',
-			'<'        => 'open',
-			'{'        => 'open',
-			'['        => 'open',
-			')'        => 'open',
+			'>'  => 'close',
+			':>' => 'close',
+			'%>' => 'close',
+			'}'  => 'close',
+			']'  => 'close',
+			')'  => 'close',
+			'<'  => 'open',
+			'<:' => 'open',
+			'<%' => 'open',
+			'{'  => 'open',
+			'['  => 'open',
+			')'  => 'open',
 		);
 
-		if ($event_name{string})
+		if (defined $event_name{string})
 		{
 			$event_name = $special_case{$lexeme};
 
 			$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
 		}
-		elsif ( ($lexeme eq '"') && (join(', ', @event_name) eq 'close_delim, open_delim') )
+		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # "'.
 		{
 			# At the time _validate_event() is called, the quote count has not yet been bumped.
 			# If this is the 1st quote, then it's an open_delim.
 			# If this is the 2nd quote, them it's a close delim.
 
-			if ($self -> quote_count % 2 == 0)
+			$$stats{$lexeme} = 0 if (! defined $$stats{$lexeme});
+
+			if ($$stats{$lexeme} % 2 == 0)
 			{
 				$event_name = 'open_delim';
 
@@ -552,7 +548,7 @@ sub _validate_event
 		}
 		else
 		{
-			die "The code only handles 1 event at a time, or ('string', 'and others'). \n";
+			die "The code only handles 1 event at a time, or some special cases. \n";
 		}
 	}
 
@@ -819,15 +815,9 @@ See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11
 
 =over 4
 
-=item o Double quotes
-
 =item o Single quotes
 
 =item o Asymmetric quotes
-
-E.g.: '<:' and ':>' as used in L<Text::Xslate> and elsewhere.
-
-=item o Perl's 'q' and 'qq' operators
 
 E.g.: 'q|' and '|'.
 
