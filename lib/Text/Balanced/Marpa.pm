@@ -93,7 +93,7 @@ has text =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-	isa      => Str,
+	isa      => Any,
 	required => 0,
 );
 
@@ -302,7 +302,7 @@ sub _pop_node_stack
 sub _process
 {
 	my($self)       = @_;
-	my($string)     = $self -> text;
+	my($string)     = $self -> text || ''; # Allow for undef.
 	my($length)     = length $string;
 	my($text)       = '';
 	my($format)     = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
@@ -574,7 +574,7 @@ sub _validate_event
 
 =head1 NAME
 
-C<GraphViz2::Marpa> - A Marpa-based parser for Graphviz C<dot> files
+C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 =head1 Synopsis
 

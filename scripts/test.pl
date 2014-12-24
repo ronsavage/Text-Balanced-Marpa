@@ -37,4 +37,3 @@ for my $text (@text)
 	$parser -> run;
 	print "Test $count: $text\n";
 }
-
