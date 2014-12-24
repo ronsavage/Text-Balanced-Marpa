@@ -35,6 +35,6 @@ for my $text (@text)
 	print '-' x 50, "\n";
 	print "Test $count: $text\n";
 	$parser -> text($text);
-	$parser -> run;
+	$parser -> parse;
 	print "Test $count: $text\n";
 }
