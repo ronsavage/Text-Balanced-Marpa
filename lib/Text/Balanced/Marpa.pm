@@ -11,7 +11,9 @@ use Marpa::R2;
 
 use Moo;
 
-use Types::Standard qw/Any HashRef Str/;
+use Tree::DAG_Node;
+
+use Types::Standard qw/Any ArrayRef HashRef Str/;
 
 use Try::Tiny;
 
@@ -64,6 +66,22 @@ has minlevel =>
 );
 
 has recce =>
+(
+	default  => sub{return ''},
+	is       => 'rw',
+	isa      => Any,
+	required => 0,
+);
+
+has stack =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
+	required => 0,
+);
+
+has tree =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
@@ -263,7 +281,26 @@ END_OF_GRAMMAR
 
 	$self -> known_events(\%event);
 
+	# Since $self -> stack has not been initialized yet,
+	# we can't call _add_daughter() until after this statement.
+
+	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {} }));
+	$self -> stack([$self -> tree -> root]);
+
 } # End of BUILD.
+
+# ------------------------------------------------
+
+sub _add_daughter
+{
+	my($self, $name, $attributes)  = @_;
+	$attributes ||= {};
+	my($node)   = Tree::DAG_Node -> new({name => $name, attributes => $attributes});
+	my($stack)  = $self -> stack;
+
+	$$stack[$#$stack] -> add_daughter($node);
+
+} # End of _add_daughter.
 
 # ------------------------------------------------
 
@@ -372,36 +409,47 @@ sub _process
 
 		if ($event_name eq 'char_string')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_angle')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_brace')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_bracket')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_double')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'close_paren')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_angle')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_brace')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_bracket')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_double')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_paren')
 		{
+			$self -> _add_daughter($event_name, {text => $lexeme});
 		}
 
 		$last_event = $event_name;
@@ -446,6 +494,8 @@ sub run
 	{
 		if (defined (my $value = $self -> _process) )
 		{
+			$self -> log(info => 'Parsed text:');
+			$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
 		}
 		else
 		{
