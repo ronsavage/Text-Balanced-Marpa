@@ -13,7 +13,7 @@ use Moo;
 
 use Tree::DAG_Node;
 
-use Types::Standard qw/Any ArrayRef HashRef Str/;
+use Types::Standard qw/Any ArrayRef HashRef Int Str/;
 
 use Try::Tiny;
 
@@ -70,6 +70,14 @@ has node_stack =>
 	default  => sub{return []},
 	is       => 'rw',
 	isa      => ArrayRef,
+	required => 0,
+);
+
+has quote_count =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
 	required => 0,
 );
 
@@ -136,51 +144,33 @@ input_text				::= input_string*
 input_string			::= quoted_text
 							| unquoted_text
 
-quoted_text				::=   open_angle	input_text	close_angle
-							| open_brace	input_text	close_brace
-							| open_bracket	input_text	close_bracket
-							| open_double	input_text	close_double
-							| open_paren	input_text	close_paren
+quoted_text				::= open_delim input_text close_delim
 
 unquoted_text			::= string
 
 # Lexemes in alphabetical order.
 
-bracket_char			~ [<>{}\[\]"()]		# Use " in comment for UltraEdit.
+bracket_char			~ [%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
 
-:lexeme					~ close_angle		pause => before		event => close_angle
-close_angle				~ '>'
-
-:lexeme					~ close_brace		pause => before		event => close_brace
-close_brace				~ '}'
-
-:lexeme					~ close_bracket		pause => before		event => close_bracket
-close_bracket			~ ']'
-
-:lexeme					~ close_double		pause => before		event => close_double
-close_double			~ '"'
-
-:lexeme					~ close_paren		pause => before		event => close_paren
-close_paren				~ ')'
+:lexeme					~ close_delim		pause => before		event => close_delim
+close_delim				~ '%]'
+close_delim				~ ':>'
+close_delim				~ [}]
+close_delim				~ [\]]
+close_delim				~ [)]
+close_delim				~ ["]				# Use " in comment for UltraEdit.
 
 escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
-non_quote_char			~ [^<>{}\[\]"()]	# Use " in comment for UltraEdit.
+non_quote_char			~ [^%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
 
-:lexeme					~ open_angle		pause => before		event => open_angle
-open_angle				~ '<'
-
-:lexeme					~ open_brace		pause => before		event => open_brace
-open_brace				~ '{'
-
-:lexeme					~ open_bracket		pause => before		event => open_bracket
-open_bracket			~ '['
-
-:lexeme					~ open_double		pause => before		event => open_double
-open_double				~ '"'
-
-:lexeme					~ open_paren		pause => before		event => open_paren
-open_paren				~ '('
+:lexeme					~ open_delim		pause => before		event => open_delim
+open_delim				~ '[%'
+open_delim				~ '<:'
+open_delim				~ [{]
+open_delim				~ [\[]
+open_delim				~ [(]
+open_delim				~ ["]				# Use " in comment for UltraEdit.
 
 :lexeme					~ string			pause => before		event => string
 string					~ escaped_char
@@ -399,6 +389,8 @@ sub _process
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
 
+		$self -> quote_count($self -> quote_count + 1) if ($lexeme eq '"');
+
 		if ($event_name ne 'string')
 		{
 			$self -> _save_text($text);
@@ -406,54 +398,14 @@ sub _process
 			$text = '';
 		}
 
-		if ($event_name eq 'close_angle')
+		if ($event_name eq 'close_delim')
 		{
 			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {delim => $lexeme, text => ''});
+			$self -> _add_daughter('close', {text => $lexeme});
 		}
-		elsif ($event_name eq 'close_brace')
+		elsif ($event_name eq 'open_delim')
 		{
-			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {delim => $lexeme, text => ''});
-		}
-		elsif ($event_name eq 'close_bracket')
-		{
-			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {delim => $lexeme, text => ''});
-		}
-		elsif ($event_name eq 'close_double')
-		{
-			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {delim => $lexeme, text => ''});
-		}
-		elsif ($event_name eq 'close_paren')
-		{
-			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {delim => $lexeme, text => ''});
-		}
-		elsif ($event_name eq 'open_angle')
-		{
-			$self -> _add_daughter('open', {delim => $lexeme, text => ''});
-			$self -> _push_node_stack;
-		}
-		elsif ($event_name eq 'open_brace')
-		{
-			$self -> _add_daughter('open', {delim => $lexeme, text => ''});
-			$self -> _push_node_stack;
-		}
-		elsif ($event_name eq 'open_bracket')
-		{
-			$self -> _add_daughter('open', {delim => $lexeme, text => ''});
-			$self -> _push_node_stack;
-		}
-		elsif ($event_name eq 'open_double')
-		{
-			$self -> _add_daughter('open', {delim => $lexeme, text => ''});
-			$self -> _push_node_stack;
-		}
-		elsif ($event_name eq 'open_paren')
-		{
-			$self -> _add_daughter('open', {delim => $lexeme, text => ''});
+			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'string')
@@ -466,10 +418,7 @@ sub _process
 
 	# Mop up any left-over chars.
 
-	if ($text ne '')
-	{
-		$self -> _add_daughter('string', {delim => '', text => $text});
-	}
+	$self -> _save_text($text);
 
 	if (my $ambiguous_status = $self -> recce -> ambiguous)
 	{
@@ -504,7 +453,7 @@ sub _save_text
 {
 	my($self, $text) = @_;
 
-	$self -> _add_daughter('string', {delim => '', text => $text}) if (length($text) );
+	$self -> _add_daughter('string', {text => $text}) if (length($text) );
 
 	return '';
 
@@ -540,14 +489,14 @@ sub _validate_event
 	{
 		my(%special_case) =
 		(
-			'>'        => 'close_angle',
-			'}'        => 'close_brace',
-			']'        => 'close_bracket',
-			')'        => 'close_paren',
-			'<'        => 'open_angle',
-			'{'        => 'open_brace',
-			'['        => 'open_bracket',
-			')'        => 'open_paren',
+			'>'        => 'close',
+			'}'        => 'close',
+			']'        => 'close',
+			')'        => 'close',
+			'<'        => 'open',
+			'{'        => 'open',
+			'['        => 'open',
+			')'        => 'open',
 		);
 
 		if ($event_name{string})
@@ -555,6 +504,22 @@ sub _validate_event
 			$event_name = $special_case{$lexeme};
 
 			$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
+		}
+		elsif ( ($lexeme eq '"') && (join(', ', @event_name) eq 'close_delim, open_delim') )
+		{
+			# At the time _validate_event() is called, the quote count has not yet been bumped.
+			# So, if this is the 2nd quote, quote_count is still 1.
+
+			if ($self -> quote_count % 2 == 1)
+			{
+				$event_name = 'close_delim';
+
+				$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
+			}
+			else
+			{
+				die "The code only handles 1 event at a time, or ('close_delim', 'open_delim'). \n";
+			}
 		}
 		else
 		{
@@ -751,7 +716,7 @@ imput string will produce a tree with 1 node.
 
 Nodes have a name and a hashref of attributes.
 
-The root of the tree has an empty hashref associated with it.
+Note: The root of the tree has an empty hashref associated with it.
 
 The name indicates the type of node. Names are one of these literals:
 
@@ -767,23 +732,17 @@ The name indicates the type of node. Names are one of these literals:
 
 =back
 
-For 'open' and 'close', the delimiter is given by the value of the 'delim' key in the hashref.
+For 'open' and 'close', the delimiter is given by the value of the 'text' key in the hashref.
 
 The (key => value) pairs in the hashref are:
 
 =over 4
 
-=item o delim => $a_string
+=item o text => $string
 
-Either the delimiter, if the node name is 'open' or 'close'.
+If the node name is 'open' and 'close', $string is the delimiter.
 
-Otherwise, the empty string.
-
-=item o text => $a_string
-
-This is the text of the current node in the tree, if the node name is 'string'.
-
-Otherwise, the empty string.
+If the node name is 'string', $string is the text from the document.
 
 =back
 
@@ -791,7 +750,7 @@ Try:
 
 	perl -Ilib scripts/samples.pl info
 
-=head2 How is HTML?XML handled?
+=head2 How is HTML/XML handled?
 
 The tree does not preserve the nested nature of HTML/XML.
 
@@ -837,7 +796,7 @@ See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11
 
 =item o Asymmetric quotes
 
-E.g.: '<%' and '%>' as used in L<Text::Xslate> and elsewhere.
+E.g.: '<:' and ':>' as used in L<Text::Xslate> and elsewhere.
 
 =item o Perl's 'q' and 'qq' operators
 
