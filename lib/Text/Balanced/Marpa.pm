@@ -89,6 +89,14 @@ has recce =>
 	required => 0,
 );
 
+has stats =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
+	required => 0,
+);
+
 has tree =>
 (
 	default  => sub{return ''},
@@ -155,6 +163,7 @@ bracket_char			~ [%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
 :lexeme					~ close_delim		pause => before		event => close_delim
 close_delim				~ '%]'
 close_delim				~ ':>'
+close_delim				~ [>]
 close_delim				~ [}]
 close_delim				~ [\]]
 close_delim				~ [)]
@@ -162,11 +171,17 @@ close_delim				~ ["]				# Use " in comment for UltraEdit.
 
 escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
-non_quote_char			~ [^%:<>{}\[\]()"]+	# Use " in comment for UltraEdit.
+# Warning: Do not add '+' to this set, even though it speeds up things.
+# The problem is that the set then gobbles up any '\', so the following
+# character is no longer recognized as being escaped.
+# Trapping the exception then generated would be possible.
+
+non_quote_char			~ [^%:<>{}\[\]()"]	# Use " in comment for UltraEdit.
 
 :lexeme					~ open_delim		pause => before		event => open_delim
 open_delim				~ '[%'
 open_delim				~ '<:'
+open_delim				~ [<]
 open_delim				~ [{]
 open_delim				~ [\[]
 open_delim				~ [(]
@@ -366,7 +381,7 @@ sub _process
 	my($lexeme);
 	my($node_name);
 	my($original_lexeme);
-	my($span, $start, $s, $stack);
+	my($span, $start, $s, $stack, $stats);
 	my($temp, $type);
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
@@ -384,6 +399,7 @@ sub _process
 		$lexeme                    = $self -> recce -> literal($start, $span);
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
+		#$stats                     = $self -> stats;
 
 		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
@@ -402,11 +418,21 @@ sub _process
 		{
 			$self -> _pop_node_stack;
 			$self -> _add_daughter('close', {text => $lexeme});
+
+			# We could keep stats on delimiter frequency to diagnose errors.
+
+			#$$stats{$lexeme}++;
+
+			#$self -> stats($stats);
 		}
 		elsif ($event_name eq 'open_delim')
 		{
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
+
+			#$$stats{$lexeme}++;
+
+			#$self -> stats($stats);
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -508,17 +534,20 @@ sub _validate_event
 		elsif ( ($lexeme eq '"') && (join(', ', @event_name) eq 'close_delim, open_delim') )
 		{
 			# At the time _validate_event() is called, the quote count has not yet been bumped.
-			# So, if this is the 2nd quote, quote_count is still 1.
+			# If this is the 1st quote, then it's an open_delim.
+			# If this is the 2nd quote, them it's a close delim.
 
-			if ($self -> quote_count % 2 == 1)
+			if ($self -> quote_count % 2 == 0)
 			{
-				$event_name = 'close_delim';
+				$event_name = 'open_delim';
 
 				$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
 			}
 			else
 			{
-				die "The code only handles 1 event at a time, or ('close_delim', 'open_delim'). \n";
+				$event_name = 'close_delim';
+
+				$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
 			}
 		}
 		else
