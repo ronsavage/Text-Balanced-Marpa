@@ -133,12 +133,10 @@ lexeme default			= latm => 1
 
 input_text				::= string+
 
-string					::= text
+string					::= char_string
 							| quoted_text
 
-text					::= char_string
-
-# Later, repititious grammar will be converted into a set of parameterized grammars.
+# Later, repititious grammar might be converted into a set of parameterized grammars.
 
 quoted_text				::=   open_angle	angle_quoted_string		close_angle
 							| open_brace	brace_quoted_string		close_brace
@@ -151,20 +149,20 @@ angle_quoted_string		::= angle_item								rank => 2
 							| angle_quoted_string angle_item		rank => 1
 
 brace_quoted_string		::=
-brace_quoted_string		::= brace_item
-							| brace_quoted_string brace_item
+brace_quoted_string		::= brace_item								rank => 2
+							| brace_quoted_string brace_item		rank => 1
 
 bracket_quoted_string	::=
-bracket_quoted_string	::= bracket_item
-							| bracket_quoted_string bracket_item
+bracket_quoted_string	::= bracket_item							rank => 2
+							| bracket_quoted_string bracket_item	rank => 1
 
 double_quoted_string	::=
-double_quoted_string	::= double_item
-							| double_quoted_string double_item
+double_quoted_string	::= double_item								rank => 2
+							| double_quoted_string double_item		rank => 1
 
 paren_quoted_string		::=
-paren_quoted_string		::= paren_item
-							| paren_quoted_string paren_item
+paren_quoted_string		::= paren_item								rank => 2
+							| paren_quoted_string paren_item		rank => 1
 
 angle_item				::= string
 							| angle_unquoted
@@ -199,7 +197,7 @@ bracket_unquoted		~ escaped_bracket_set
 							| non_bracket_set
 
 :lexeme					~ char_string		pause => before		event => char_string
-char_string				~ [[:print:]]
+char_string				~ [^<>{}\[\]"()]+	# Use " in comment for UltraEdit.
 
 :lexeme					~ close_angle		pause => before		event => close_angle
 close_angle				~ '>'
@@ -208,7 +206,7 @@ close_angle				~ '>'
 close_brace				~ '}'
 
 :lexeme					~ close_bracket		pause => before		event => close_bracket
-close_bracket			~ '}'
+close_bracket			~ ']'
 
 :lexeme					~ close_double		pause => before		event => close_double
 close_double			~ '"'
@@ -248,7 +246,7 @@ open_angle				~ '<'
 open_brace				~ '{'
 
 :lexeme					~ open_bracket		pause => before		event => open_bracket
-open_bracket			~ '{'
+open_bracket			~ '['
 
 :lexeme					~ open_double		pause => before		event => open_double
 open_double				~ '"'
@@ -379,6 +377,7 @@ sub _process
 	my($self)          = @_;
 	my($string)        = $self -> text;
 	my($length)        = length $string;
+	my($char_string)   = '';
 	my($format)        = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
 	my($last_event)    = '';
 	my($pos)           = 0;
@@ -414,9 +413,16 @@ sub _process
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
 
+		if ( ($last_event ne '') && ($last_event eq 'char_string') )
+		{
+			$self -> _add_daughter('char_string', {text => $char_string});
+
+			$char_string = '';
+		}
+
 		if ($event_name eq 'char_string')
 		{
-			$self -> _add_daughter($event_name, {text => $lexeme});
+			$char_string .= $lexeme;
 		}
 		elsif ($event_name eq 'close_angle')
 		{
@@ -471,6 +477,11 @@ sub _process
 
 		$last_event = $event_name;
     }
+
+	if ($last_event eq 'char_string')
+	{
+		$self -> _add_daughter('char_string', {text => $char_string});
+	}
 
 	if (my $ambiguous_status = $self -> recce -> ambiguous)
 	{
@@ -537,6 +548,8 @@ sub run
 			$result = 1;
 
 			$self -> log(error => 'Parse failed');
+			$self -> log(info => 'Parsed text:');
+			$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
 		}
 	}
 	catch
@@ -544,6 +557,8 @@ sub run
 		$result = 1;
 
 		$self -> log(error => "Parse failed. Error: $_");
+		$self -> log(info => 'Parsed text:');
+		$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
 	};
 
 	$self -> log(info => "Parse result:  $result (0 is success)");
