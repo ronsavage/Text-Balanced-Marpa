@@ -281,12 +281,6 @@ END_OF_GRAMMAR
 
 	$self -> known_events(\%event);
 
-	# Since $self -> stack has not been initialized yet,
-	# we can't call _add_daughter() until after this statement.
-
-	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {} }));
-	$self -> stack([$self -> tree -> root]);
-
 } # End of BUILD.
 
 # ------------------------------------------------
@@ -485,6 +479,12 @@ sub run
 			#trace_terminals => $self -> trace_terminals,
 		})
 	);
+
+	# Since $self -> stack has not been initialized yet,
+	# we can't call _add_daughter() until after this statement.
+
+	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {} }));
+	$self -> stack([$self -> tree -> root]);
 
 	# Return 0 for success and 1 for failure.
 
