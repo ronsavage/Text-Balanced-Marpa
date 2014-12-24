@@ -120,6 +120,7 @@ sub BUILD
 	}
 
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
+	# https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11/delimiter.html
 
 	$self -> bnf
 	(

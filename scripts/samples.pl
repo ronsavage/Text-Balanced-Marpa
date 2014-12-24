@@ -22,6 +22,7 @@ my(@text)     =
 	q|a[b[c]d]e|,
 	q|a{b[c]d}e|,
 	q|a<b{c[d(e)f]g}h>i|, # No double quotes yet!
+	q|<html><head><title>A Title</title></head><body><h1>A Heading</h1></body></html>|,
 	q|{a nested { and } are okay as are () and <> pairs and escaped \}'s };|,
 	q|{a nested\n{ and } are okay as are\n() and <> pairs and escaped \}'s };|,
 #	q|{a nested { and } are okay as are unbalanced ( and < pairs and escaped \}'s };|,
