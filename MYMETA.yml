@@ -30,8 +30,10 @@ provides:
     file: lib/GraphViz2/Marpa/Utils.pm
     version: '2.03'
 requires:
+  Log::Handler: '0.71'
   Marpa::R2: '2.096'
   Moo: '1.006'
+  Tree::DAG_Node: '1.23'
   Try::Tiny: '0.09'
   Types::Standard: '1.000004'
   open: '0'

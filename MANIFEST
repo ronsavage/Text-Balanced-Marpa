@@ -1,0 +1,15 @@
+.gitignore
+Build.PL
+Changelog.ini
+Changes
+lib/Text/Balanced/Marpa.pm
+LICENSE
+Makefile.PL
+MANIFEST
+META.json
+META.yml
+README
+scripts/pod2html.sh
+scripts/test.pl
+t/test.t
+xt/author/pod.t
