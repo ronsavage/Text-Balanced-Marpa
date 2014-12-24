@@ -136,68 +136,19 @@ input_text				::= string+
 string					::= char_string
 							| quoted_text
 
-# Later, repititious grammar might be converted into a set of parameterized grammars.
-
-quoted_text				::=   open_angle	angle_quoted_string		close_angle
-							| open_brace	brace_quoted_string		close_brace
-							| open_bracket	bracket_quoted_string	close_bracket
-							| open_double	double_quoted_string	close_double
-							| open_paren	paren_quoted_string		close_paren
-
-angle_quoted_string		::=
-angle_quoted_string		::= angle_item								rank => 2
-							| angle_quoted_string angle_item		rank => 1
-
-brace_quoted_string		::=
-brace_quoted_string		::= brace_item								rank => 2
-							| brace_quoted_string brace_item		rank => 1
-
-bracket_quoted_string	::=
-bracket_quoted_string	::= bracket_item							rank => 2
-							| bracket_quoted_string bracket_item	rank => 1
-
-double_quoted_string	::=
-double_quoted_string	::= double_item								rank => 2
-							| double_quoted_string double_item		rank => 1
-
-paren_quoted_string		::=
-paren_quoted_string		::= paren_item								rank => 2
-							| paren_quoted_string paren_item		rank => 1
-
-angle_item				::= string
-							| angle_unquoted
-
-brace_item				::= string
-							| brace_unquoted
-
-bracket_item			::= string
-							| bracket_unquoted
-
-double_item				::= string
-							| double_unquoted
-
-paren_item				::= string
-							| paren_unquoted
+quoted_text				::=   open_angle	input_text	close_angle
+							| open_brace	input_text	close_brace
+							| open_bracket	input_text	close_bracket
+							| open_double	input_text	close_double
+							| open_paren	input_text	close_paren
 
 # Lexemes in alphabetical order.
 
-angle_set				~ [<>]
-
-angle_unquoted			~ escaped_angle_set
-							| non_angle_set
-
-brace_set				~ [{}]
-
-brace_unquoted			~ escaped_brace_set
-							| non_brace_set
-
-bracket_set				~ [\[\]]
-
-bracket_unquoted		~ escaped_bracket_set
-							| non_bracket_set
+bracket_char			~ [<>{}\[\]"()]		# Use " in comment for UltraEdit.
 
 :lexeme					~ char_string		pause => before		event => char_string
-char_string				~ [^<>{}\[\]"()]+	# Use " in comment for UltraEdit.
+char_string				~ escaped_string
+							| unescaped_string
 
 :lexeme					~ close_angle		pause => before		event => close_angle
 close_angle				~ '>'
@@ -214,30 +165,7 @@ close_double			~ '"'
 :lexeme					~ close_paren		pause => before		event => close_paren
 close_paren				~ ')'
 
-double_set				~ ["]				# Use " in comment for UltraEdit.
-
-double_unquoted			~ escaped_double_set
-							| non_double_set
-
-escaped_angle_set		~ '\' angle_set		# Use ' in comment for UltraEdit.
-
-escaped_brace_set		~ '\' brace_set		# Use ' in comment for UltraEdit.
-
-escaped_bracket_set		~ '\' bracket_set	# Use ' in comment for UltraEdit.
-
-escaped_double_set		~ '\' double_set	# Use ' in comment for UltraEdit.
-
-escaped_paren_set		~ '\' paren_set		# Use ' in comment for UltraEdit.
-
-non_angle_set			~ [^<>]+
-
-non_brace_set			~ [^{}]+
-
-non_bracket_set			~ [^\[\]]+
-
-non_double_set			~ [^"]+				# Use " in comment for UltraEdit.
-
-non_paren_set			~ [^()]+
+escaped_string			~ '\' bracket_char	# Use ' in comment for UltraEdit.
 
 :lexeme					~ open_angle		pause => before		event => open_angle
 open_angle				~ '<'
@@ -254,10 +182,7 @@ open_double				~ '"'
 :lexeme					~ open_paren		pause => before		event => open_paren
 open_paren				~ '('
 
-paren_set				~ [()]
-
-paren_unquoted			~ escaped_paren_set
-							| non_paren_set
+unescaped_string		~ [^<>{}\[\]"()]+	# Use " in comment for UltraEdit.
 
 END_OF_GRAMMAR
 	);
