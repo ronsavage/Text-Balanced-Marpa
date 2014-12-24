@@ -1,11 +1,6 @@
 use strict;
 use warnings;
 
-use Config;
-
-use File::Spec;
-use File::Temp;
-
 use Module::Build;
 
 # -----------------------------------------------
@@ -53,10 +48,12 @@ $class -> new
 	},
 	requires =>
 	{
+		'Log::Handler'    => 0.71,
 		'Marpa::R2'       => 2.096000,
 		'Moo'             => 1.006000,
 		'open'            => 0,
 		'strict'          => 0,
+		'Tree::DAG_Node'  => 1.23,
 		'Try::Tiny'       => 0.09,
 		'Types::Standard' => 1.000004,
 		'warnings'        => 0,

@@ -1,12 +1,7 @@
 use strict;
 use warnings;
 
-use Config;
-
 use ExtUtils::MakeMaker;
-
-use File::Spec;
-use File::Temp;
 
 # -----------------------------------------------
 
@@ -34,12 +29,14 @@ my(%params) =
 	PL_FILES  => {},
 	PREREQ_PM =>
 	{
+		'Log::Handler'    => 0.71,
 		'Marpa::R2'       => 2.096000,
 		'Moo'             => 1.006000,
 		'open'            => 0,
 		'strict'          => 0,
 		'Test::More'      => 1.001006,
 #		'Test::Pod'       => 1.45, # Make it optional. See xt/author/pod.t
+		'Tree::DAG_Node'  => 1.23,
 		'Try::Tiny'       => 0.09,
 		'Types::Standard' => 1.000004,
 		'warnings'        => 0,
