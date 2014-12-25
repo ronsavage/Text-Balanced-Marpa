@@ -41,6 +41,14 @@ has delim_action =>
 	required => 0,
 );
 
+has delim_frequency =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
+	required => 0,
+);
+
 has delim_stack =>
 (
 	default  => sub{return []},
@@ -118,14 +126,6 @@ has recce =>
 	default  => sub{return ''},
 	is       => 'rw',
 	isa      => Any,
-	required => 0,
-);
-
-has stats =>
-(
-	default  => sub{return {} },
-	is       => 'rw',
-	isa      => HashRef,
 	required => 0,
 );
 
@@ -412,14 +412,14 @@ sub _process
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
 
-	my($delim_stack);
+	my($delim_frequency, $delim_stack);
 	my($event_name);
 	my(@fields);
 	my($lexeme);
 	my($node_name);
 	my($original_lexeme);
 	my($previous_delim);
-	my($span, $start, $s, $stack, $stats);
+	my($span, $start, $s, $stack);
 	my($temp, $type);
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
@@ -432,10 +432,10 @@ sub _process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
+		$delim_frequency           = $self -> delim_frequency;
 		$delim_stack               = $self -> delim_stack;
-		$stats                     = $self -> stats;
 		($start, $span)            = $self -> recce -> pause_span;
-		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $stats);
+		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $delim_frequency);
 		$lexeme                    = $self -> recce -> literal($start, $span);
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
@@ -471,9 +471,9 @@ sub _process
 
 			$self -> delim_stack($delim_stack);
 
-			$$stats{$lexeme}++;
+			$$delim_frequency{$lexeme}++;
 
-			$self -> stats($stats);
+			$self -> delim_frequency($delim_frequency);
 		}
 		elsif ($event_name eq 'open_delim')
 		{
@@ -484,9 +484,9 @@ sub _process
 
 			$self -> delim_stack($delim_stack);
 
-			$$stats{$lexeme}++;
+			$$delim_frequency{$lexeme}++;
 
-			$self -> stats($stats);
+			$self -> delim_frequency($delim_frequency);
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -543,7 +543,7 @@ sub _save_text
 
 sub _validate_event
 {
-	my($self, $string, $start, $span, $pos, $stats) = @_;
+	my($self, $string, $start, $span, $pos, $delim_frequency) = @_;
 	my(@event)         = @{$self -> recce -> events};
 	my($event_count)   = scalar @event;
 	my(@event_name)    = sort map{$$_[0]} @event;
@@ -581,7 +581,7 @@ sub _validate_event
 			# If this is the 1st quote, then it's an open_delim.
 			# If this is the 2nd quote, them it's a close delim.
 
-			if ($$stats{$lexeme} % 2 == 0)
+			if ($$delim_frequency{$lexeme} % 2 == 0)
 			{
 				$event_name = 'open_delim';
 
@@ -622,7 +622,7 @@ sub validate_open_close
 	my(%delim_action);
 	my($open_quote);
 	my($prefix, %prefix);
-	my(%stats);
+	my(%delim_frequency);
 
 	for my $i (0 .. $#$open)
 	{
@@ -632,11 +632,11 @@ sub validate_open_close
 		$seen{open}{$$open[$i]}++;
 		$seen{close}{$$close[$i]}++;
 
-		$delim_action{$$open[$i]}    = 'open';
-		$delim_action{$$close[$i]}   = 'close';
-		$$matching_delim{$$open[$i]} = $$close[$i];
-		$stats{$$open[$i]}           = 0;
-		$stats{$$close[$i]}          = 0;
+		$delim_action{$$open[$i]}     = 'open';
+		$delim_action{$$close[$i]}    = 'close';
+		$$matching_delim{$$open[$i]}  = $$close[$i];
+		$delim_frequency{$$open[$i]}  = 0;
+		$delim_frequency{$$close[$i]} = 0;
 
 		if (length($$open[$i]) == 1)
 		{
@@ -679,8 +679,8 @@ sub validate_open_close
 	}
 
 	$self -> delim_action(\%delim_action);
+	$self -> delim_frequency(\%delim_frequency);
 	$self -> matching_delim($matching_delim);
-	$self -> stats(\%stats);
 
 	for my $key (keys %seen)
 	{
@@ -850,6 +850,11 @@ See the L</FAQ> for details.
 
 Returns a hashref, where the keys are delimiters and the values are either 'open' or 'close'.
 
+=head2 delim_frequency()
+
+Returns a hashref where the keys are opening and closing delimiters, and the values are the # of
+times each delimiter appears in the input stream.
+
 =head2 known_events()
 
 Returns a hashref where the keys are event names and the values are 1.
@@ -925,11 +930,6 @@ This is the only method the caller needs to call. All parameters are supplied to
 See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
-
-=head2 stats()
-
-Returns a hashref where the keys are opening and closing delimiters, and the values are the # of
-times each delimiter appears in the input stream.
 
 =head2 strict_nesting([$Boolean])
 
