@@ -20,6 +20,8 @@ my(@text) =
 	q||,
 	q|a|,
 	q|{a}|,
+	q|a {b} c|,
+	q|a {b {c} d} e|,
 	q|a <b {c [d (e "f") g] h} i> j|,
 );
 
