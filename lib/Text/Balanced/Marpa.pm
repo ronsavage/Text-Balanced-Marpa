@@ -180,7 +180,7 @@ sub BUILD
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
 	#
 	# Note:   Tokens of the form '_xxx_' are placed just below, with values returned
-	#			by the call to _validate_open_close().
+	#			by the call to validate_open_close().
 
 	my($bnf) = <<'END_OF_GRAMMAR';
 
@@ -223,12 +223,10 @@ string					~ escaped_char
 							| non_quote_char
 END_OF_GRAMMAR
 
-	my($hashref) = $self -> _validate_open_close;
+	my($hashref) = $self -> validate_open_close;
 	$bnf         =~ s/_open_/$$hashref{open}/;
 	$bnf         =~ s/_close_/$$hashref{close}/;
 	$bnf         =~ s/_delim_/$$hashref{delim}/g;
-
-	$self -> log(info => "\n$bnf\n");
 
 	$self -> bnf($bnf);
 	$self -> grammar
@@ -610,19 +608,11 @@ sub _validate_event
 
 # ------------------------------------------------
 
-sub _validate_open_close
+sub validate_open_close
 {
 	my($self)  = @_;
 	my($open)  = $self -> open;
 	my($close) = $self -> close;
-
-	# TODO: Remove.
-	push @$open,  '<', '{', '[', '(', '"', "'", '<:', '[%';
-	push @$close, '>', '}', ']', ')', '"', "'", ':>', '%]';
-
-	# TODO: Remove.
-	$self -> open($open);
-	$self -> close($close);
 
 	die "Error: # of open delims must match # of close delims\n" if ($#$open != $#$close);
 
@@ -703,7 +693,7 @@ sub _validate_open_close
 
 	return \%substitute;
 
-} # End of _validate_open_close.
+} # End of validate_open_close.
 
 # ------------------------------------------------
 
