@@ -33,7 +33,7 @@ has close =>
 	required => 0,
 );
 
-has delim_action =>
+has delimiter_action =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
@@ -41,7 +41,7 @@ has delim_action =>
 	required => 0,
 );
 
-has delim_frequency =>
+has delimiter_frequency =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
@@ -49,7 +49,7 @@ has delim_frequency =>
 	required => 0,
 );
 
-has delim_stack =>
+has delimiter_stack =>
 (
 	default  => sub{return []},
 	is       => 'rw',
@@ -201,19 +201,19 @@ unquoted_text			::= string
 
 # Lexemes in alphabetical order.
 
-delim_char				~ [_delim_]
+delimiter_char			~ [_delimiter_]
 
 :lexeme					~ close_delim		pause => before		event => close_delim
 _close_
 
-escaped_char			~ '\' delim_char	# Use ' in comment for UltraEdit.
+escaped_char			~ '\' delimiter_char	# Use ' in comment for UltraEdit.
 
 # Warning: Do not add '+' to this set, even though it speeds up things.
 # The problem is that the set then gobbles up any '\', so the following
 # character is no longer recognized as being escaped.
 # Trapping the exception then generated would be possible.
 
-non_quote_char			~ [^_delim_]	# Use " in comment for UltraEdit.
+non_quote_char			~ [^_delimiter_]	# Use " in comment for UltraEdit.
 
 :lexeme					~ open_delim		pause => before		event => open_delim
 _open_
@@ -226,7 +226,7 @@ END_OF_GRAMMAR
 	my($hashref) = $self -> validate_open_close;
 	$bnf         =~ s/_open_/$$hashref{open}/;
 	$bnf         =~ s/_close_/$$hashref{close}/;
-	$bnf         =~ s/_delim_/$$hashref{delim}/g;
+	$bnf         =~ s/_delimiter_/$$hashref{delim}/g;
 
 	$self -> bnf($bnf);
 	$self -> grammar
@@ -412,7 +412,7 @@ sub _process
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
 
-	my($delim_frequency, $delim_stack);
+	my($delimiter_frequency, $delimiter_stack);
 	my($event_name);
 	my(@fields);
 	my($lexeme);
@@ -432,10 +432,10 @@ sub _process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
-		$delim_frequency           = $self -> delim_frequency;
-		$delim_stack               = $self -> delim_stack;
+		$delimiter_frequency       = $self -> delimiter_frequency;
+		$delimiter_stack           = $self -> delimiter_stack;
 		($start, $span)            = $self -> recce -> pause_span;
-		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $delim_frequency);
+		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $delimiter_frequency);
 		$lexeme                    = $self -> recce -> literal($start, $span);
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
@@ -456,7 +456,7 @@ sub _process
 			$self -> _pop_node_stack;
 			$self -> _add_daughter('close', {text => $lexeme});
 
-			$previous_delim = pop @$delim_stack;
+			$previous_delim = pop @$delimiter_stack;
 
 			if ($$matching_delim{$previous_delim} ne $lexeme)
 			{
@@ -469,24 +469,24 @@ sub _process
 				$self -> log(warning => "Warning: $message");
 			}
 
-			$self -> delim_stack($delim_stack);
+			$self -> delimiter_stack($delimiter_stack);
 
-			$$delim_frequency{$lexeme}--;
+			$$delimiter_frequency{$lexeme}--;
 
-			$self -> delim_frequency($delim_frequency);
+			$self -> delimiter_frequency($delimiter_frequency);
 		}
 		elsif ($event_name eq 'open_delim')
 		{
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 
-			push @$delim_stack, $lexeme;
+			push @$delimiter_stack, $lexeme;
 
-			$self -> delim_stack($delim_stack);
+			$self -> delimiter_stack($delimiter_stack);
 
-			$$delim_frequency{$lexeme}++;
+			$$delimiter_frequency{$lexeme}++;
 
-			$self -> delim_frequency($delim_frequency);
+			$self -> delimiter_frequency($delimiter_frequency);
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -543,7 +543,7 @@ sub _save_text
 
 sub _validate_event
 {
-	my($self, $string, $start, $span, $pos, $delim_frequency) = @_;
+	my($self, $string, $start, $span, $pos, $delimiter_frequency) = @_;
 	my(@event)         = @{$self -> recce -> events};
 	my($event_count)   = scalar @event;
 	my(@event_name)    = sort map{$$_[0]} @event;
@@ -567,11 +567,11 @@ sub _validate_event
 
 	if ($event_count > 1)
 	{
-		my($delim_action) = $self -> delim_action;
+		my($delimiter_action) = $self -> delimiter_action;
 
 		if (defined $event_name{string})
 		{
-			$event_name = $$delim_action{$lexeme};
+			$event_name = $$delimiter_action{$lexeme};
 
 			$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
 		}
@@ -581,7 +581,7 @@ sub _validate_event
 			# If this is the 1st quote, then it's an open_delim.
 			# If this is the 2nd quote, them it's a close delim.
 
-			if ($$delim_frequency{$lexeme} % 2 == 0)
+			if ($$delimiter_frequency{$lexeme} % 2 == 0)
 			{
 				$event_name = 'open_delim';
 
@@ -619,10 +619,10 @@ sub validate_open_close
 	my(%seen)           = (close => {}, open => {});
 
 	my($close_quote);
-	my(%delim_action);
+	my(%delimiter_action);
 	my($open_quote);
 	my($prefix, %prefix);
-	my(%delim_frequency);
+	my(%delimiter_frequency);
 
 	for my $i (0 .. $#$open)
 	{
@@ -632,11 +632,11 @@ sub validate_open_close
 		$seen{open}{$$open[$i]}++;
 		$seen{close}{$$close[$i]}++;
 
-		$delim_action{$$open[$i]}     = 'open';
-		$delim_action{$$close[$i]}    = 'close';
-		$$matching_delim{$$open[$i]}  = $$close[$i];
-		$delim_frequency{$$open[$i]}  = 0;
-		$delim_frequency{$$close[$i]} = 0;
+		$delimiter_action{$$open[$i]}     = 'open';
+		$delimiter_action{$$close[$i]}    = 'close';
+		$$matching_delim{$$open[$i]}      = $$close[$i];
+		$delimiter_frequency{$$open[$i]}  = 0;
+		$delimiter_frequency{$$close[$i]} = 0;
 
 		if (length($$open[$i]) == 1)
 		{
@@ -678,8 +678,8 @@ sub validate_open_close
 		$substitute{delim} .= $prefix if ($prefix{$prefix} == 1);
 	}
 
-	$self -> delim_action(\%delim_action);
-	$self -> delim_frequency(\%delim_frequency);
+	$self -> delimiter_action(\%delimiter_action);
+	$self -> delimiter_frequency(\%delimiter_frequency);
 	$self -> matching_delim($matching_delim);
 
 	for my $key (keys %seen)
@@ -836,21 +836,19 @@ Default: ''.
 
 Returns a string containing the grammar constructed based on user input.
 
-=head2 close([$arrayref])
+=head2 close()
 
-Here, the [] indicate an optional parameter.
+Get the arrayref of closing delimiters.
 
-Get or set the arrayref of closing delimiters.
-
-See the L</FAQ> for details.
+See the L</FAQ> for details and warnings.
 
 'close' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=head2 delim_action()
+=head2 delimiter_action()
 
 Returns a hashref, where the keys are delimiters and the values are either 'open' or 'close'.
 
-=head2 delim_frequency()
+=head2 delimiter_frequency()
 
 Returns a hashref where the keys are opening and closing delimiters, and the values are the # of
 times each delimiter appears in the input stream.
@@ -914,13 +912,11 @@ Returns a substring of $s, starting at $offset, for use in progress messages.
 
 The default string length returned is 20 characters.
 
-=head2 open([$arrayref])
+=head2 open()
 
-Here, the [] indicate an optional parameter.
+Get the arrayref of opening delimiters.
 
-Get or set the arrayref of opening delimiters.
-
-See the L</FAQ> for details.
+See the L</FAQ> for details and warnings.
 
 'open' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
@@ -961,7 +957,7 @@ Get or set the string to be parsed.
 
 =head1 FAQ
 
-=head2 Warning: Changing the delimiters after calling new
+=head2 Warning: calling open() and close() after calling new
 
 Don't do that.
 
