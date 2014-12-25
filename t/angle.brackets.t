@@ -12,8 +12,9 @@ use Text::Balanced::Marpa;
 my($count)  = 0;
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open  => ['<'],
-	close => ['>'],
+	open                   => ['<'],
+	close                  => ['>'],
+	overlapping_delimiters => 1,
 );
 my(@text) =
 (

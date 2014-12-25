@@ -11,11 +11,12 @@ my($count)    = 0;
 my($maxlevel) = shift || 'debug'; # Try 'info' (without the quotes).
 my($parser)   = Text::Balanced::Marpa -> new
 (
-	open     => ['<', '{', '[', '(', '<:', '[%', '"'],
-	close    => ['>', '}', ']', ')', ':>', '%]', '"'],
-	maxlevel => $maxlevel
+	open                   => ['<', '{', '[', '(', '<:', '[%', '"'],
+	close                  => ['>', '}', ']', ')', ':>', '%]', '"'],
+	maxlevel               => $maxlevel,
+	overlapping_delimiters => 1,
 );
-my(@text)     =
+my(@text) =
 (
 	q||,
 	q|a|,
@@ -35,6 +36,7 @@ my(@text)     =
 	q|a "b" c "d" e|,
 	q|a "b" c 'd' e|,
 	q|<: $a :> < b >|,
+	q|<: $a <: $b :> :>|,
 	q|[% $a %]|,
 	q|{Bold [Italic}]|,
 	q|<i><b>Bold Italic</b></i>|,

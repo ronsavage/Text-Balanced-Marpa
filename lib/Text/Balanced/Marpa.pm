@@ -41,19 +41,19 @@ has delimiter_action =>
 	required => 0,
 );
 
-has delimiter_frequency =>
-(
-	default  => sub{return {} },
-	is       => 'rw',
-	isa      => HashRef,
-	required => 0,
-);
-
 has delimiter_stack =>
 (
 	default  => sub{return []},
 	is       => 'rw',
 	isa      => ArrayRef,
+	required => 0,
+);
+
+has delimiter_frequency =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
 	required => 0,
 );
 
@@ -81,7 +81,7 @@ has logger =>
 	required => 0,
 );
 
-has matching_delim =>
+has matching_delimiter =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
@@ -121,19 +121,19 @@ has open =>
 	required => 0,
 );
 
+has overlapping_delimiters =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
+	required => 0,
+);
+
 has recce =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
 	isa      => Any,
-	required => 0,
-);
-
-has strict_nesting =>
-(
-	default  => sub{return 0},
-	is       => 'rw',
-	isa      => Int,
 	required => 0,
 );
 
@@ -400,14 +400,14 @@ sub _pop_node_stack
 
 sub _process
 {
-	my($self)           = @_;
-	my($string)         = $self -> text || ''; # Allow for undef.
-	my($length)         = length $string;
-	my($text)           = '';
-	my($format)         = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
-	my($last_event)     = '';
-	my($pos)            = 0;
-	my($matching_delim) = $self -> matching_delim;
+	my($self)               = @_;
+	my($string)             = $self -> text || ''; # Allow for undef.
+	my($length)             = length $string;
+	my($text)               = '';
+	my($format)             = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
+	my($last_event)         = '';
+	my($pos)                = 0;
+	my($matching_delimiter) = $self -> matching_delimiter;
 
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
@@ -416,11 +416,10 @@ sub _process
 	my($event_name);
 	my(@fields);
 	my($lexeme);
-	my($node_name);
+	my($message);
 	my($original_lexeme);
-	my($previous_delim);
-	my($span, $start, $s, $stack);
-	my($temp, $type);
+	my($span, $start);
+	my($tos);
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
 	# Also, in read(), we use $pos and $length to avoid reading Ruby Slippers tokens (if any).
@@ -453,40 +452,47 @@ sub _process
 
 		if ($event_name eq 'close_delim')
 		{
-			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {text => $lexeme});
+			$$delimiter_frequency{$lexeme}--;
 
-			$previous_delim = pop @$delimiter_stack;
+			$self -> delimiter_frequency($delimiter_frequency);
 
-			if ($$matching_delim{$previous_delim} ne $lexeme)
+			$tos = pop @$delimiter_stack;
+
+			$self -> delimiter_stack($delimiter_stack);
+
+			# If the top of the delimiter stack has the lexeme corresponding to the
+			# opening delimiter of the current closing delimiter, then there is no error.
+
+			if ($$matching_delimiter{$$tos{lexeme} } ne $lexeme)
 			{
-				my($message) = "Last open delim: $previous_delim. Unexpected closing lexeme: $lexeme";
+				$message = "Last open delim: $$tos{lexeme}. Unexpected closing delim: $lexeme";
 
-				die "Error: $message\n" if ($self -> strict_nesting);
+				die "Error: $message\n" if ($self -> overlapping_delimiters);
 
 				# If we did not die, then it's a warning message.
 
 				$self -> log(warning => "Warning: $message");
 			}
 
-			$self -> delimiter_stack($delimiter_stack);
-
-			$$delimiter_frequency{$lexeme}--;
-
-			$self -> delimiter_frequency($delimiter_frequency);
+			$self -> _pop_node_stack;
+			$self -> _add_daughter('close', {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_delim')
 		{
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 
-			push @$delimiter_stack, $lexeme;
-
-			$self -> delimiter_stack($delimiter_stack);
-
-			$$delimiter_frequency{$lexeme}++;
+			$$delimiter_frequency{$$matching_delimiter{$lexeme} }++;
 
 			$self -> delimiter_frequency($delimiter_frequency);
+
+			push @$delimiter_stack,
+				{
+					count  => $$delimiter_frequency{$$matching_delimiter{$lexeme} },
+					lexeme => $lexeme,
+				};
+
+			$self -> delimiter_stack($delimiter_stack);
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -615,7 +621,7 @@ sub validate_open_close
 	die "Error: # of open delims must match # of close delims\n" if ($#$open != $#$close);
 
 	my(%substitute)     = (close => '', delim => '', open => '');
-	my($matching_delim) = {};
+	my($matching_delimiter) = {};
 	my(%seen)           = (close => {}, open => {});
 
 	my($close_quote);
@@ -634,7 +640,7 @@ sub validate_open_close
 
 		$delimiter_action{$$open[$i]}     = 'open';
 		$delimiter_action{$$close[$i]}    = 'close';
-		$$matching_delim{$$open[$i]}      = $$close[$i];
+		$$matching_delimiter{$$open[$i]}      = $$close[$i];
 		$delimiter_frequency{$$open[$i]}  = 0;
 		$delimiter_frequency{$$close[$i]} = 0;
 
@@ -680,7 +686,7 @@ sub validate_open_close
 
 	$self -> delimiter_action(\%delimiter_action);
 	$self -> delimiter_frequency(\%delimiter_frequency);
-	$self -> matching_delim($matching_delim);
+	$self -> matching_delimiter($matching_delimiter);
 
 	for my $key (keys %seen)
 	{
@@ -816,7 +822,7 @@ A value for this option is mandatory.
 
 Default: None.
 
-=item o strict_nesting => $Boolean
+=item o overlapping_delimiters => $Boolean
 
 If set, the code dies if the # of closing delimiters does not match the # of open delimiters
 (of the correspoding type, obviously). This value is checked each time a closing delimiter is
@@ -875,7 +881,7 @@ This logger is passed to other modules.
 
 'logger' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=head2 matching_delim()
+=head2 matching_delimiter()
 
 Returns a hashref where the keys are opening delimiters and the values are the corresponding closing
 delimiters.
@@ -929,17 +935,17 @@ See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
 
-=head2 strict_nesting([$Boolean])
+=head2 overlapping_delimiters([$Boolean])
 
 Here, the [] indicate an optional parameter.
 
-Get or set the strict nesting flag.
+Get or set the overlapping_delimiters flag.
 
-If set, the code dies if the # of closing delimiters does not match the # of open delimiters
+If set, the code dies if the closing delimiter does not match the last opening delimiter
 (of the correspoding type, obviously). This value is checked each time a closing delimiter is
 found in the input stream.
 
-'strict_nesting' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+'overlapping_delimiters' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =item o tree()
 
