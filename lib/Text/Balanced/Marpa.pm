@@ -959,6 +959,15 @@ Get or set the string to be parsed.
 
 =head1 FAQ
 
+=head2 Warning: Changing the delimiters after calling new
+
+Don't do that.
+
+To make the code work, you would have to manually call L</validate_open_close()>. But even then
+a lot of things would have to be re-initialized to give the code any hope of working.
+
+And that raises the question: Should the tree of text parsed so far be destroyed and re-initialized?
+
 =head2 What is the format of the 'open' and 'close' parameters to new()?
 
 Each of these parameters takes an arrayref as a value.
