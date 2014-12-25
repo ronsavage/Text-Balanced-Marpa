@@ -581,8 +581,6 @@ sub _validate_event
 			# If this is the 1st quote, then it's an open_delim.
 			# If this is the 2nd quote, them it's a close delim.
 
-			$$stats{$lexeme} = 0 if (! defined $$stats{$lexeme});
-
 			if ($$stats{$lexeme} % 2 == 0)
 			{
 				$event_name = 'open_delim';
@@ -624,6 +622,7 @@ sub validate_open_close
 	my(%delim_action);
 	my($open_quote);
 	my($prefix, %prefix);
+	my(%stats);
 
 	for my $i (0 .. $#$open)
 	{
@@ -636,6 +635,8 @@ sub validate_open_close
 		$delim_action{$$open[$i]}    = 'open';
 		$delim_action{$$close[$i]}   = 'close';
 		$$matching_delim{$$open[$i]} = $$close[$i];
+		$stats{$$open[$i]}           = 0;
+		$stats{$$close[$i]}          = 0;
 
 		if (length($$open[$i]) == 1)
 		{
@@ -679,6 +680,7 @@ sub validate_open_close
 
 	$self -> delim_action(\%delim_action);
 	$self -> matching_delim($matching_delim);
+	$self -> stats(\%stats);
 
 	for my $key (keys %seen)
 	{
@@ -762,6 +764,18 @@ Key-value pairs accepted in the parameter list (see corresponding methods for de
 
 =over 4
 
+=item o close => $arrayref
+
+An arrayref of strings, each one a closing delimiter.
+
+The # of elements must match the # of elements in the 'open' arrayref.
+
+See the L</FAQ> for details.
+
+A value for this option is mandatory.
+
+Default: None.
+
 =item o logger => $aLoggerObject
 
 Specify a logger compatible with L<Log::Handler>, for the lexer and parser to use.
@@ -790,6 +804,26 @@ Default: 'error'.
 
 No lower levels are used.
 
+=item o open => $arrayref
+
+An arrayref of strings, each one an opening delimiter.
+
+The # of elements must match the # of elements in the 'open' arrayref.
+
+See the L</FAQ> for details.
+
+A value for this option is mandatory.
+
+Default: None.
+
+=item o strict_nesting => $Boolean
+
+If set, the code dies if the # of closing delimiters does not match the # of open delimiters
+(of the correspoding type, obviously). This value is checked each time a closing delimiter is
+found in the input stream.
+
+Default: 0.
+
 =item o text => $the_string_to_be_parsed
 
 Default: ''.
@@ -797,6 +831,28 @@ Default: ''.
 =back
 
 =head1 Methods
+
+=head2 bnf()
+
+Returns a string containing the grammar constructed based on user input.
+
+=head2 close([$arrayref])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the arrayref of closing delimiters.
+
+See the L</FAQ> for details.
+
+'close' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
+=head2 delim_action()
+
+Returns a hashref, where the keys are delimiters and the values are either 'open' or 'close'.
+
+=head2 known_events()
+
+Returns a hashref where the keys are event names and the values are 1.
 
 =head2 log($level, $s)
 
@@ -813,6 +869,11 @@ To disable logging, just set 'logger' to the empty string (not undef), in the ca
 This logger is passed to other modules.
 
 'logger' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
+=head2 matching_delim()
+
+Returns a hashref where the keys are opening delimiters and the values are the corresponding closing
+delimiters.
 
 =head2 maxlevel([$string])
 
@@ -846,6 +907,16 @@ Returns a substring of $s, starting at $offset, for use in progress messages.
 
 The default string length returned is 20 characters.
 
+=head2 open([$arrayref])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the arrayref of opening delimiters.
+
+See the L</FAQ> for details.
+
+'open' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
 =head2 parse()
 
 This is the only method the caller needs to call. All parameters are supplied to L</new()>
@@ -855,6 +926,29 @@ See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
 
+=head2 stats()
+
+Returns a hashref where the keys are opening and closing delimiters, and the values are the # of
+times each delimiter appears in the input stream.
+
+=head2 strict_nesting([$Boolean])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the strict nesting flag.
+
+If set, the code dies if the # of closing delimiters does not match the # of open delimiters
+(of the correspoding type, obviously). This value is checked each time a closing delimiter is
+found in the input stream.
+
+'strict_nesting' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
+=item o tree()
+
+Returns an object of type L<Tree::DAG_Node>, which holds the parsed data.
+
+Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
+
 =head2 text([$string])
 
 Here, the [] indicate an optional parameter.
@@ -863,13 +957,23 @@ Get or set the string to be parsed.
 
 'text' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=item o tree()
-
-Get the tree, managed by L<Tree::DAG_Node>, which holds the parsed data.
-
-Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
-
 =head1 FAQ
+
+=head2 What is the format of the 'open' and 'close' parameters to new()?
+
+Each of these parameters takes an arrayref as a value.
+
+The # of elements in the 2 arrayrefs must be the same.
+
+The 1st element in the 'open' arrayref is the 1st user-chosen opening delimiter, and the 1st
+element in the 'close' arrayref will be the corresponding closing delimiter.
+
+It is possible to use a delimiter which is part of another delimiter.
+
+See scripts/samples.pl. It uses both '<' and '<:' as opening delimiters and their corresponding
+closing delimiters are '>' and ':>'.
+
+Neat, huh?
 
 =head2 How is the parsed data held in RAM?
 

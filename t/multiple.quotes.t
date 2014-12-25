@@ -12,16 +12,21 @@ use Text::Balanced::Marpa;
 my($count)  = 0;
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open  => ["'"],
-	close => ["'"],
+	open  => ['<', '{', '[', '(', '"'],
+	close => ['>', '}', ']', ')', '"'],
 );
 my(@text) =
 (
 	q||,
 	q|a|,
-	q|'a'|,
-	q|a 'b 'c' d' e|,
-	q|a 'b "c" d' e|,
+	q|{a}|,
+	q|[a]|,
+	q|a {b} c|,
+	q|a [b] c|,
+	q|a {b {c} d} e|,
+	q|a [b [c] d] e|,
+	q|a {b [c] d} e|,
+	q|a <b {c [d (e "f") g] h} i> j|,
 );
 
 my($result);
