@@ -9,7 +9,7 @@ use Text::Balanced::Marpa;
 
 my($count)    = 0;
 my($maxlevel) = shift || 'debug'; # Try 'info' (without the quotes).
-my($parser)   = Text::Balanced::Marpa -> new(maxlevel => $maxlevel, mismatch_is_fatal => 0);
+my($parser)   = Text::Balanced::Marpa -> new(maxlevel => $maxlevel, strict_nesting => 0);
 my(@text)     =
 (
 	q||,

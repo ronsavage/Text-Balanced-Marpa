@@ -33,6 +33,14 @@ has close =>
 	required => 0,
 );
 
+has delim_action =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
+	required => 0,
+);
+
 has delim_stack =>
 (
 	default  => sub{return []},
@@ -65,6 +73,14 @@ has logger =>
 	required => 0,
 );
 
+has matching_delim =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
+	required => 0,
+);
+
 has maxlevel =>
 (
 	default  => sub{return 'notice'},
@@ -78,14 +94,6 @@ has minlevel =>
 	default  => sub{return 'error'},
 	is       => 'rw',
 	isa      => Str,
-	required => 0,
-);
-
-has mismatch_is_fatal =>
-(
-	default  => sub{return 0},
-	is       => 'rw',
-	isa      => Int,
 	required => 0,
 );
 
@@ -105,14 +113,6 @@ has open =>
 	required => 0,
 );
 
-has pair =>
-(
-	default  => sub{return {} },
-	is       => 'rw',
-	isa      => HashRef,
-	required => 0,
-);
-
 has recce =>
 (
 	default  => sub{return ''},
@@ -126,6 +126,14 @@ has stats =>
 	default  => sub{return {} },
 	is       => 'rw',
 	isa      => HashRef,
+	required => 0,
+);
+
+has strict_nesting =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
 	required => 0,
 );
 
@@ -151,24 +159,9 @@ our $VERSION = '1.00';
 
 sub BUILD
 {
-	my($self)  = @_;
-	my($open)  = $self -> open;
-	my($close) = $self -> close;
-	my($pair)  = {};
+	my($self) = @_;
 
-	push @$open,  '<', '{', '[', '(', '"', "'", '<:', '[%';
-	push @$close, '>', '}', ']', ')', '"', "'", ':>', '%]';
-
-	# Must perform all sorts of checks on user input:
-	# o # of opens == # of closes.
-	# o Each delim provided once. But open may eq close.
-
-	for my $i (0 .. $#$open)
-	{
-		$$pair{$$open[$i]} = $$close[$i];
-	}
-
-	$self -> pair($pair);
+	# Define logger before validation so we can see the error messages.
 
 	if (! defined $self -> logger)
 	{
@@ -185,10 +178,11 @@ sub BUILD
 	}
 
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
+	#
+	# Note:   Tokens of the form '_xxx_' are placed just below, with values returned
+	#			by the call to _validate_open_close().
 
-	$self -> bnf
-	(
-<<'END_OF_GRAMMAR'
+	my($bnf) = <<'END_OF_GRAMMAR';
 
 :default				::= action => [values]
 
@@ -207,44 +201,36 @@ unquoted_text			::= string
 
 # Lexemes in alphabetical order.
 
-bracket_char			~ [%:<>{}\[\]()"']	# Use " in comment for UltraEdit.
+delim_char				~ [_delim_]
 
 :lexeme					~ close_delim		pause => before		event => close_delim
-close_delim				~ '%]'
-close_delim				~ ':>'
-close_delim				~ [>]
-close_delim				~ [}]
-close_delim				~ [\]]
-close_delim				~ [)]
-close_delim				~ ["]				# Use " in comment for UltraEdit.
-close_delim				~ [']				# Use ' in comment for UltraEdit.
+_close_
 
-escaped_char			~ '\' bracket_char	# Use ' in comment for UltraEdit.
+escaped_char			~ '\' delim_char	# Use ' in comment for UltraEdit.
 
 # Warning: Do not add '+' to this set, even though it speeds up things.
 # The problem is that the set then gobbles up any '\', so the following
 # character is no longer recognized as being escaped.
 # Trapping the exception then generated would be possible.
 
-non_quote_char			~ [^%:<>{}\[\]()"']	# Use " in comment for UltraEdit.
+non_quote_char			~ [^_delim_]	# Use " in comment for UltraEdit.
 
 :lexeme					~ open_delim		pause => before		event => open_delim
-open_delim				~ '[%'
-open_delim				~ '<:'
-open_delim				~ [<]
-open_delim				~ [{]
-open_delim				~ [\[]
-open_delim				~ [(]
-open_delim				~ ["]				# Use " in comment for UltraEdit.
-open_delim				~ [']				# Use ' in comment for UltraEdit.
+_open_
 
 :lexeme					~ string			pause => before		event => string
 string					~ escaped_char
 							| non_quote_char
-
 END_OF_GRAMMAR
-	);
 
+	my($hashref) = $self -> _validate_open_close;
+	$bnf         =~ s/_open_/$$hashref{open}/;
+	$bnf         =~ s/_close_/$$hashref{close}/;
+	$bnf         =~ s/_delim_/$$hashref{delim}/g;
+
+	$self -> log(info => "\n$bnf\n");
+
+	$self -> bnf($bnf);
 	$self -> grammar
 	(
 		Marpa::R2::Scanless::G -> new
@@ -303,7 +289,7 @@ sub _decode_result
 		}
 		elsif ($ref_type)
 		{
-			die "Unsupported object type $ref_type\n";
+			die "Error: Unsupported object type $ref_type\n";
 		}
 		else
 		{
@@ -386,7 +372,7 @@ sub parse
 	{
 		$result = 1;
 
-		$self -> log(error => "Parse failed. Error: $_");
+		$self -> log(error => "Parse failed. $_");
 		$self -> log(info => 'Parsed text:');
 		$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
 	};
@@ -416,14 +402,14 @@ sub _pop_node_stack
 
 sub _process
 {
-	my($self)       = @_;
-	my($string)     = $self -> text || ''; # Allow for undef.
-	my($length)     = length $string;
-	my($text)       = '';
-	my($format)     = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
-	my($last_event) = '';
-	my($pos)        = 0;
-	my($pair)       = $self -> pair;
+	my($self)           = @_;
+	my($string)         = $self -> text || ''; # Allow for undef.
+	my($length)         = length $string;
+	my($text)           = '';
+	my($format)         = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
+	my($last_event)     = '';
+	my($pos)            = 0;
+	my($matching_delim) = $self -> matching_delim;
 
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
@@ -456,7 +442,7 @@ sub _process
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
 
-		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
+		die "Error: lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
 
@@ -474,11 +460,11 @@ sub _process
 
 			$previous_delim = pop @$delim_stack;
 
-			if ($$pair{$previous_delim} ne $lexeme)
+			if ($$matching_delim{$previous_delim} ne $lexeme)
 			{
 				my($message) = "Last open delim: $previous_delim. Unexpected closing lexeme: $lexeme";
 
-				die "$message\n" if ($self -> mismatch_is_fatal);
+				die "Error: $message\n" if ($self -> strict_nesting);
 
 				# If we did not die, then it's a warning message.
 
@@ -578,34 +564,20 @@ sub _validate_event
 
 	for (@event_name)
 	{
-		die "Unexpected event name '$_'" if (! ${$self -> known_events}{$_});
+		die "Error: Unexpected event name '$_'" if (! ${$self -> known_events}{$_});
 	}
 
 	if ($event_count > 1)
 	{
-		my(%special_case) =
-		(
-			'>'  => 'close',
-			':>' => 'close',
-			'%>' => 'close',
-			'}'  => 'close',
-			']'  => 'close',
-			')'  => 'close',
-			'<'  => 'open',
-			'<:' => 'open',
-			'<%' => 'open',
-			'{'  => 'open',
-			'['  => 'open',
-			')'  => 'open',
-		);
+		my($delim_action) = $self -> delim_action;
 
 		if (defined $event_name{string})
 		{
-			$event_name = $special_case{$lexeme};
+			$event_name = $$delim_action{$lexeme};
 
 			$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
 		}
-		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # "'.
+		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
 		{
 			# At the time _validate_event() is called, the quote count has not yet been bumped.
 			# If this is the 1st quote, then it's an open_delim.
@@ -628,13 +600,110 @@ sub _validate_event
 		}
 		else
 		{
-			die "The code only handles 1 event at a time, or some special cases. \n";
+			die "Error: The code only handles 1 event at a time, or a few special cases. \n";
 		}
 	}
 
 	return ($event_name, $span, $pos);
 
 } # End of _validate_event.
+
+# ------------------------------------------------
+
+sub _validate_open_close
+{
+	my($self)  = @_;
+	my($open)  = $self -> open;
+	my($close) = $self -> close;
+
+	# TODO: Remove.
+	push @$open,  '<', '{', '[', '(', '"', "'", '<:', '[%';
+	push @$close, '>', '}', ']', ')', '"', "'", ':>', '%]';
+
+	# TODO: Remove.
+	$self -> open($open);
+	$self -> close($close);
+
+	die "Error: # of open delims must match # of close delims\n" if ($#$open != $#$close);
+
+	my(%substitute)     = (close => '', delim => '', open => '');
+	my($matching_delim) = {};
+	my(%seen)           = (close => {}, open => {});
+
+	my($close_quote);
+	my(%delim_action);
+	my($open_quote);
+	my($prefix, %prefix);
+
+	for my $i (0 .. $#$open)
+	{
+		$seen{open}{$$open[$i]}   = 0 if (! $seen{open}{$$open[$i]});
+		$seen{close}{$$close[$i]} = 0 if (! $seen{close}{$$close[$i]});
+
+		$seen{open}{$$open[$i]}++;
+		$seen{close}{$$close[$i]}++;
+
+		$delim_action{$$open[$i]}    = 'open';
+		$delim_action{$$close[$i]}   = 'close';
+		$$matching_delim{$$open[$i]} = $$close[$i];
+
+		if (length($$open[$i]) == 1)
+		{
+			$open_quote = $$open[$i] eq '[' ? "[\\$$open[$i]]" : "[$$open[$i]]";
+		}
+		else
+		{
+			# This fails if length > 1 and open contains a single quote.
+
+			$open_quote = "'$$open[$i]'";
+		}
+
+		if (length($$close[$i]) == 1)
+		{
+			$close_quote = $$close[$i] eq ']' ? "[\\$$close[$i]]" : "[$$close[$i]]";
+		}
+		else
+		{
+			# This fails if length > 1 and close contains a single quote.
+
+			$close_quote = "'$$close[$i]'";
+		}
+
+		$substitute{open}  .= "open_delim\t\t\t\~ $open_quote\n";
+		$substitute{close} .= "close_delim\t\t\t\~ $close_quote\n";
+		$prefix            = substr($$open[$i], 0, 1);
+		$prefix            = "\\$prefix" if ($prefix =~ /[\[\]]/);
+		$prefix{$prefix}   = 0 if (! $prefix{$prefix});
+
+		$prefix{$prefix}++;
+
+		$substitute{delim} .= $prefix if ($prefix{$prefix} == 1);
+		$prefix            = substr($$close[$i], 0, 1);
+		$prefix            = "\\$prefix" if ($prefix =~ /[\[\]]/);
+		$prefix{$prefix}   = 0 if (! $prefix{$prefix});
+
+		$prefix{$prefix}++;
+
+		$substitute{delim} .= $prefix if ($prefix{$prefix} == 1);
+	}
+
+	$self -> delim_action(\%delim_action);
+	$self -> matching_delim($matching_delim);
+
+	for my $key (keys %seen)
+	{
+		for my $delim (keys %{$seen{$key} })
+		{
+			if ( ($delim ne '"') && ($seen{$key}{$delim} != 1) )
+			{
+				die "Error: $key delim $delim occurs $seen{$key}{$delim} times\n"
+			}
+		}
+	}
+
+	return \%substitute;
+
+} # End of _validate_open_close.
 
 # ------------------------------------------------
 
