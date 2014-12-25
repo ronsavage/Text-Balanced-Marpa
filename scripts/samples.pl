@@ -9,7 +9,7 @@ use Text::Balanced::Marpa;
 
 my($count)    = 0;
 my($maxlevel) = shift || 'debug'; # Try 'info' (without the quotes).
-my($parser)   = Text::Balanced::Marpa -> new(maxlevel => $maxlevel);
+my($parser)   = Text::Balanced::Marpa -> new(maxlevel => $maxlevel, mismatch_is_fatal => 0);
 my(@text)     =
 (
 	q||,
@@ -26,13 +26,16 @@ my(@text)     =
 	q|{a nested { and } are okay as are () and <> pairs and escaped \}\'s };|,
 	q|{a nested\n{ and } are okay as are\n() and <> pairs and escaped \}\'s };|,
 ##	q|{a nested { and } are okay as are unbalanced ( and < pairs and escaped \}'s };|,
+##	'q|a| \|b\| q|c| qd',
 	q|a "b" c|,
 	q|a 'b' c|,
 	q|a "b" c "d" e|,
 	q|a "b" c 'd' e|,
 	q|<: $a :> < b >|,
 	q|[% $a %]|,
-##	'q|a| \|b\| q|c| qd',
+	q|{Bold [Italic}]|,
+	q|<i><b>Bold Italic</b></i>|,
+	q|<i><b>Bold Italic</i></b>|,
 );
 
 for my $text (@text)

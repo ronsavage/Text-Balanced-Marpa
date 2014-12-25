@@ -25,6 +25,22 @@ has bnf =>
 	required => 0,
 );
 
+has close =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
+	required => 0,
+);
+
+has delim_stack =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
+	required => 0,
+);
+
 has grammar =>
 (
 	default  => sub {return ''},
@@ -65,11 +81,35 @@ has minlevel =>
 	required => 0,
 );
 
+has mismatch_is_fatal =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
+	required => 0,
+);
+
 has node_stack =>
 (
 	default  => sub{return []},
 	is       => 'rw',
 	isa      => ArrayRef,
+	required => 0,
+);
+
+has open =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
+	required => 0,
+);
+
+has pair =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
 	required => 0,
 );
 
@@ -111,7 +151,24 @@ our $VERSION = '1.00';
 
 sub BUILD
 {
-	my($self) = @_;
+	my($self)  = @_;
+	my($open)  = $self -> open;
+	my($close) = $self -> close;
+	my($pair)  = {};
+
+	push @$open,  '<', '{', '[', '(', '"', "'", '<:', '[%';
+	push @$close, '>', '}', ']', ')', '"', "'", ':>', '%]';
+
+	# Must perform all sorts of checks on user input:
+	# o # of opens == # of closes.
+	# o Each delim provided once. But open may eq close.
+
+	for my $i (0 .. $#$open)
+	{
+		$$pair{$$open[$i]} = $$close[$i];
+	}
+
+	$self -> pair($pair);
 
 	if (! defined $self -> logger)
 	{
@@ -366,15 +423,18 @@ sub _process
 	my($format)     = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
 	my($last_event) = '';
 	my($pos)        = 0;
+	my($pair)       = $self -> pair;
 
 	$self -> log(debug => "Length of input: $length. Input |$string|");
 	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
 
+	my($delim_stack);
 	my($event_name);
 	my(@fields);
 	my($lexeme);
 	my($node_name);
 	my($original_lexeme);
+	my($previous_delim);
 	my($span, $start, $s, $stack, $stats);
 	my($temp, $type);
 
@@ -388,6 +448,7 @@ sub _process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
+		$delim_stack               = $self -> delim_stack;
 		$stats                     = $self -> stats;
 		($start, $span)            = $self -> recce -> pause_span;
 		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $stats);
@@ -411,6 +472,21 @@ sub _process
 			$self -> _pop_node_stack;
 			$self -> _add_daughter('close', {text => $lexeme});
 
+			$previous_delim = pop @$delim_stack;
+
+			if ($$pair{$previous_delim} ne $lexeme)
+			{
+				my($message) = "Last open delim: $previous_delim. Unexpected closing lexeme: $lexeme";
+
+				die "$message\n" if ($self -> mismatch_is_fatal);
+
+				# If we did not die, then it's a warning message.
+
+				$self -> log(warning => "Warning: $message");
+			}
+
+			$self -> delim_stack($delim_stack);
+
 			$$stats{$lexeme}++;
 
 			$self -> stats($stats);
@@ -419,6 +495,10 @@ sub _process
 		{
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
+
+			push @$delim_stack, $lexeme;
+
+			$self -> delim_stack($delim_stack);
 
 			$$stats{$lexeme}++;
 
