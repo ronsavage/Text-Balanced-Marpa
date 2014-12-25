@@ -471,7 +471,7 @@ sub _process
 
 			$self -> delim_stack($delim_stack);
 
-			$$delim_frequency{$lexeme}++;
+			$$delim_frequency{$lexeme}--;
 
 			$self -> delim_frequency($delim_frequency);
 		}
@@ -854,6 +854,8 @@ Returns a hashref, where the keys are delimiters and the values are either 'open
 
 Returns a hashref where the keys are opening and closing delimiters, and the values are the # of
 times each delimiter appears in the input stream.
+
+The value is incremented for each opening delimiter and decremented for each closing delimiter.
 
 =head2 known_events()
 
