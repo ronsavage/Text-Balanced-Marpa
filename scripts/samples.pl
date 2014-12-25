@@ -32,6 +32,7 @@ my(@text)     =
 	q|a "b" c 'd' e|,
 	q|<: $a :> < b >|,
 	q|[% $a %]|,
+##	'q|a| \|b\| q|c| qd',
 );
 
 for my $text (@text)

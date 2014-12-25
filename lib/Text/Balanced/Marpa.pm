@@ -815,8 +815,6 @@ See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11
 
 =over 4
 
-=item o Single quotes
-
 =item o Asymmetric quotes
 
 E.g.: 'q|' and '|'.
