@@ -896,7 +896,7 @@ The value is incremented for each opening delimiter and decremented for each clo
 
 Returns the last error or warning message set when the code died.
 
-Error messages always start with 'Error: '. No message ends with "\n".
+Error messages always start with 'Error:\s'. Messages never end with "\n".
 
 Parsing error strings is not a good idea, ever though this module's format for them is fixed.
 
@@ -1013,6 +1013,9 @@ See L</error_message()> and L</error_number()>.
 =head2 How do I escape delimiters?
 
 By backslash-escaping the character(s) of any delimiters which appear in the string.
+
+As an example, if the opening delimiter is '<:', this means you have to escape I<all> the '<' chars
+and I<all> the colons in the text.
 
 The backslash is preserved in the output.
 
