@@ -864,21 +864,23 @@ Returns the last error number set.
 
 Warnings have values < 0, and errors have values > 0.
 
-Current values possible:
+Current values:
 
 =over 4
 
-=item o -3 => 'Terminals expected: ' . join(', ', @$terminals)
+=item o -3 => 'Terminals expected: a, b, c'
 
 This is a warning.
 
 =item o -2 => Opened delimiter $lexeme again before closing previous one"
 
-This is a warning.
+This is a warning unless you set the option C<nesting_is_fatal> to make it fatal.
+In that case, the value is 2.
 
 =item o -1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
 
-This is a warning.
+This is a warning unless you set the option C<overlap_is_fatal> to make it fatal.
+In that case, the value is 1.
 
 =item o 0 => Successful parse
 
@@ -886,11 +888,11 @@ This is the default value.
 
 =item o 1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
 
-This is an error. The code calls C<die>.
+This is an error if you set the option C<overlap_is_fatal> to make it fatal. The code calls C<die>.
 
 =item o 2 => Opened delimiter $lexeme again before closing previous one"
 
-This is an error. The code calls C<die>.
+This is an error if you set the option C<overlap_is_fatal> to make it fatal. The code calls C<die>.
 
 =back
 
@@ -941,6 +943,8 @@ This is the only method the caller needs to call. All parameters are supplied to
 See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
+
+If the value is 1, you need to call L</error_number()> to find out what happened.
 
 =head2 tree()
 
