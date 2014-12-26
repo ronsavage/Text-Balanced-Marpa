@@ -11,6 +11,7 @@ META.yml
 README
 scripts/pod2html.sh
 scripts/samples.pl
+scripts/synopsis.pl
 t/angle.brackets.t
 t/braces.t
 t/brackets.t
