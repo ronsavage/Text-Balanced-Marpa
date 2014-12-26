@@ -719,7 +719,7 @@ for help on unpacking and installing distros.
 
 =head1 Installation
 
-Install L<Text::Balanced::Marpa> as you would for any C<Perl> module:
+Install L<Text::Balanced::Marpa> as you would any C<Perl> module:
 
 Run:
 
@@ -1136,7 +1136,7 @@ L<https://rt.cpan.org/Public/Dist/Display.html?Name=Text::Balanced::Marpa>.
 
 L<Text::Balanced::Marpa> was written by Ron Savage I<E<lt>ron@savage.net.auE<gt>> in 2014.
 
-Marpa's homepage: <http://savage.net.au/Marpa.html>.
+Marpa's homepage: L<http://savage.net.au/Marpa.html>.
 
 My homepage: L<http://savage.net.au/>.
 
