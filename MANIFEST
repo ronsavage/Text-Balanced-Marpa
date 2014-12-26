@@ -16,9 +16,11 @@ t/braces.t
 t/brackets.t
 t/colons.t
 t/double.quotes.t
+t/escapes.t
 t/html.t
 t/multiple.quotes.t
 t/parenthises.t
 t/percents.t
+t/perl.delimiters.t
 t/single.quotes.t
 xt/author/pod.t
