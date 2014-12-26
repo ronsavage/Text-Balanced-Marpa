@@ -5,16 +5,16 @@ use warnings;
 
 use Test::More;
 
-use Text::Balanced::Marpa;
+use Text::Balanced::Marpa ':constants';
 
 # -----------
 
 my($count)  = 0;
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open                   => ['<'],
-	close                  => ['>'],
-	overlapping_delimiters => 1,
+	open    => ['<'],
+	close   => ['>'],
+	options => overlap_is_fatal, # No-op, because '<' matches '>'! The 'b' and '/i' are irrelevant.
 );
 my(@text) =
 (

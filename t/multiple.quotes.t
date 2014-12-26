@@ -5,15 +5,16 @@ use warnings;
 
 use Test::More;
 
-use Text::Balanced::Marpa;
+use Text::Balanced::Marpa ':constants';
 
 # -----------
 
 my($count)  = 0;
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open  => ['<', '{', '[', '(', '"'],
-	close => ['>', '}', ']', ')', '"'],
+	open    => ['<', '{', '[', '(', '"'],
+	close   => ['>', '}', ']', ')', '"'],
+	options => overlap_is_fatal,
 );
 my(@text) =
 (
@@ -24,6 +25,7 @@ my(@text) =
 	q|a {b} c|,
 	q|a [b] c|,
 	q|a {b {c} d} e|,
+	q|a <b {c> d} e|, # overlap_is_fatal triggers an error here.
 	q|a [b [c] d] e|,
 	q|a {b [c] d} e|,
 	q|a <b {c [d (e "f") g] h} i> j|,
@@ -39,7 +41,14 @@ for my $text (@text)
 
 	$result = $parser -> parse;
 
-	ok($result == 0, "Parsed $text");
+	if ($count == 8)
+	{
+		ok($result == 1, "Deliberate error: Failed to parse $text");
+	}
+	else
+	{
+		ok($result == 0, "Parsed $text");
+	}
 
 	#diag join("\n", @{$parser -> tree -> tree2string});
 }

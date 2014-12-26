@@ -5,6 +5,13 @@ use warnings;
 use warnings qw(FATAL utf8); # Fatalize encoding glitches.
 use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 
+use Const::Exporter constants =>
+[
+	nothing_is_fatal => 0,
+	overlap_is_fatal => 1,
+	nesting_is_fatal => 2,
+];
+
 use Log::Handler;
 
 use Marpa::R2;
@@ -118,6 +125,14 @@ has open =>
 	default  => sub{return []},
 	is       => 'rw',
 	isa      => ArrayRef,
+	required => 0,
+);
+
+has options =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
 	required => 0,
 );
 
@@ -460,14 +475,14 @@ sub _process
 
 			$self -> delimiter_stack($delimiter_stack);
 
-			# If the top of the delimiter stack has the lexeme corresponding to the
-			# opening delimiter of the current closing delimiter, then there is no error.
+			# If the top of the delimiter stack is not the lexeme corresponding to the
+			# opening delimiter of the current closing delimiter, then there's an error.
 
 			if ($$matching_delimiter{$$tos{lexeme} } ne $lexeme)
 			{
-				$message = "Last open delim: $$tos{lexeme}. Unexpected closing delim: $lexeme";
+				$message = "Last open delimiter: $$tos{lexeme}. Unexpected closing delimiter: $lexeme";
 
-				die "Error: $message\n" if ($self -> overlapping_delimiters);
+				die "Error: $message\n" if ($self -> options & overlap_is_fatal);
 
 				# If we did not die, then it's a warning message.
 
@@ -479,10 +494,15 @@ sub _process
 		}
 		elsif ($event_name eq 'open_delim')
 		{
-			$self -> _add_daughter('open', {text => $lexeme});
-			$self -> _push_node_stack;
-
 			$$delimiter_frequency{$$matching_delimiter{$lexeme} }++;
+
+			# If the top of the delimiter stack reaches 2, then there's an error.
+			# Unlink mismatched delimiters (just above), this is never gets a warning.
+
+			if ( ($self -> options & nesting_is_fatal) && ($$delimiter_frequency{$$matching_delimiter{$lexeme} } > 1) )
+			{
+				die "Error: Opened delimiter $lexeme again before closing previous one\n";
+			}
 
 			$self -> delimiter_frequency($delimiter_frequency);
 
@@ -493,6 +513,9 @@ sub _process
 				};
 
 			$self -> delimiter_stack($delimiter_stack);
+
+			$self -> _add_daughter('open', {text => $lexeme});
+			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'string')
 		{
@@ -822,13 +845,13 @@ A value for this option is mandatory.
 
 Default: None.
 
-=item o overlapping_delimiters => $Boolean
+=item o options => $bit_string
 
-If set, the code dies if the # of closing delimiters does not match the # of open delimiters
-(of the correspoding type, obviously). This value is checked each time a closing delimiter is
-found in the input stream.
+This allows you to turn on various options.
 
-Default: 0.
+Default: 0 (nothing is fatal).
+
+See L</FAQ> for details.
 
 =item o text => $the_string_to_be_parsed
 
@@ -935,17 +958,15 @@ See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
 
-=head2 overlapping_delimiters([$Boolean])
+=head2 options([$bit_string])
 
 Here, the [] indicate an optional parameter.
 
-Get or set the overlapping_delimiters flag.
+Get or set the option flags.
 
-If set, the code dies if the closing delimiter does not match the last opening delimiter
-(of the correspoding type, obviously). This value is checked each time a closing delimiter is
-found in the input stream.
+'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-'overlapping_delimiters' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+See L</FAQ> for details.
 
 =item o tree()
 
@@ -984,9 +1005,47 @@ element in the 'close' arrayref will be the corresponding closing delimiter.
 It is possible to use a delimiter which is part of another delimiter.
 
 See scripts/samples.pl. It uses both '<' and '<:' as opening delimiters and their corresponding
-closing delimiters are '>' and ':>'.
+closing delimiters are '>' and ':>'. Neat, huh?
 
-Neat, huh?
+=head2 What are the possible values for the 'options' parameter to new()?
+
+Firstly, to make these constants available, you must say:
+
+	use Text::Balanced::Marpa ':constants';
+
+Secondly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/multiple.quotes.t,
+t/percents.t and scripts/samples.pl.
+
+=over 4
+
+=item o nothing_is_fatal
+
+This is the default.
+
+It's value is 0.
+
+=item o overlap_is_fatal
+
+This means overlapping delimiters cause a fatal error.
+
+So, using C<overlap_is_fatal> means '{Bold [Italic}]' would be a fatal error.
+
+I use this example since it gives me the opportunity to warn you, this will I<not> do what you want
+if you try to use the delimiters of '<' and '>' for HTML. That is, '<i><b>Bold Italic</i></b>' is
+not an error because what overlap are '<b>' and '</i>' BUT THEY ARE NOT TAGS. The tags are '<' and
+'>', ok? See also t/html.t.
+
+It's value is 1.
+
+=item o nesting_is_fatal
+
+This means nesting of identical opening delimiters is fatal.
+
+So, using C<nesting_is_fatal> means 'a <: b <: c :> d :> e' would be a fatal error.
+
+It's value is 2.
+
+=back
 
 =head2 How is the parsed data held in RAM?
 

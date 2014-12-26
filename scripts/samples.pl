@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Text::Balanced::Marpa;
+use Text::Balanced::Marpa ':constants';
 
 # -----------
 
@@ -11,10 +11,10 @@ my($count)    = 0;
 my($maxlevel) = shift || 'debug'; # Try 'info' (without the quotes).
 my($parser)   = Text::Balanced::Marpa -> new
 (
-	open                   => ['<', '{', '[', '(', '<:', '[%', '"'],
-	close                  => ['>', '}', ']', ')', ':>', '%]', '"'],
-	maxlevel               => $maxlevel,
-	overlapping_delimiters => 1,
+	open     => ['<', '{', '[', '(', '<:', '[%', '"'],
+	close    => ['>', '}', ']', ')', ':>', '%]', '"'],
+	maxlevel => $maxlevel,
+	options  => overlap_is_fatal, # Diff output after using nothing_is_fatal.
 );
 my(@text) =
 (
@@ -38,8 +38,8 @@ my(@text) =
 	q|<: $a :> < b >|,
 	q|<: $a <: $b :> :>|,
 	q|[% $a %]|,
-	q|{Bold [Italic}]|,
-	q|<i><b>Bold Italic</b></i>|,
+	q|{Bold [Italic}]|,           # This one is affected by overlap_is_fatal. Check the output.
+	q|<i><b>Bold Italic</b></i>|, # This one is not, since '<' is the delim, not '<b>' :-).
 	q|<i><b>Bold Italic</i></b>|,
 );
 
