@@ -7,11 +7,12 @@ use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 
 use Const::Exporter constants =>
 [
-	nothing_is_fatal => 0,
-	debug            => 1,
-	print_warnings   => 2,
-	overlap_is_fatal => 4,
-	nesting_is_fatal => 8,
+	nothing_is_fatal   => 0,
+	debug              => 1,
+	print_warnings     => 2,
+	overlap_is_fatal   => 4,
+	nesting_is_fatal   => 8,
+	ambiguity_is_fatal => 16,
 ];
 
 use Marpa::R2;
@@ -474,19 +475,24 @@ sub _process
 
 	$self -> _save_text($text);
 
-	if (my $ambiguous_status = $self -> recce -> ambiguous)
+	if (my $status = $self -> recce -> ambiguous)
 	{
 		my($terminals) = $self -> recce -> terminals_expected;
 		$terminals     = ['(None)'] if ($#$terminals < 0);
+		$message       = 'Ambiguous parse. Status: $status. Terminals expected: ' . join(', ', @$terminals);
 
-		if ($self -> options & print_warnings)
+		$self -> error_message($message);
+		$self -> error_number(3);
+
+		if ($self -> options & ambiguity_is_fatal)
 		{
-			$message = 'Terminals expected: ' . join(', ', @$terminals);
-
-			$self -> error_message($message);
+			die "Error: $message\n";
+		}
+		elsif ($self -> options & print_warnings)
+		{
 			$self -> error_number(-3);
 
-			print "$message\nParse is ambiguous. Status: $ambiguous_status\n";
+			print "$message\n";
 		}
 	}
 
@@ -724,6 +730,42 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 See scripts/synopsis.pl.
 
+This is the printout of synopsis.pl:
+
+	Parsing |<: a :>|
+	Parsed text:
+	root. Attributes: {}
+	   |--- open. Attributes: {text => "<:"}
+	   |   |--- string. Attributes: {text => " a "}
+	   |--- close. Attributes: {text => ":>"}
+	Parse result: 0 (0 is success)
+	--------------------------------------------------
+	Parsing |a [% b <: c :> d %] e|
+	Parsed text:
+	root. Attributes: {}
+	   |--- string. Attributes: {text => "a "}
+	   |--- open. Attributes: {text => "[%"}
+	   |   |--- string. Attributes: {text => " b "}
+	   |   |--- open. Attributes: {text => "<:"}
+	   |   |   |--- string. Attributes: {text => " c "}
+	   |   |--- close. Attributes: {text => ":>"}
+	   |   |--- string. Attributes: {text => " d "}
+	   |--- close. Attributes: {text => "%]"}
+	   |--- string. Attributes: {text => " e"}
+	Parse result: 0 (0 is success)
+	--------------------------------------------------
+	Parsing |a <: b <: c :> d :> e|
+	Error: Parse failed. Error: Opened delimiter <: again before closing previous one
+	Text parsed so far:
+	root. Attributes: {}
+	   |--- string. Attributes: {text => "a "}
+	   |--- open. Attributes: {text => "<:"}
+	       |--- string. Attributes: {text => " b "}
+	Parse result: 1 (0 is success)
+	Deliberate error: Failed to parse |a <: b <: c :> d :> e|
+	Error number: 2. Error message: Opened delimiter <: again before closing previous one
+	--------------------------------------------------
+
 =head1 Description
 
 L<Text::Balanced::Marpa> provides a L<Marpa::R2>-based parser for extracting delimited text
@@ -852,15 +894,17 @@ The value is incremented for each opening delimiter and decremented for each clo
 
 =head2 error_message()
 
-Returns the last error message set when the code died.
+Returns the last error or warning message set when the code died.
 
-Parsing error strings is never a good idea, ever though this one's format is fixed.
+Error messages always start with 'Error: ', but never end with "\n".
+
+Parsing error strings is not a good idea, ever though this module's format for them is fixed.
 
 See L</error_number()>.
 
 =head2 error_number()
 
-Returns the last error number set.
+Returns the last error or warning number set.
 
 Warnings have values < 0, and errors have values > 0.
 
@@ -868,9 +912,12 @@ Current values:
 
 =over 4
 
-=item o -3 => 'Terminals expected: a, b, c'
+=item o -3 => 'Ambiguous parse. Status: $status. Terminals expected: a, b, ...'
 
-This is a warning.
+This is a warning unless you set the option C<ambiguity_is_fatal> to make it fatal.
+In that case, the value is 3.
+
+It's only produced when the parse is ambiguous.
 
 =item o -2 => Opened delimiter $lexeme again before closing previous one"
 
@@ -962,6 +1009,10 @@ Get or set the string to be parsed.
 
 =head1 FAQ
 
+=head2 Where are the error messages and numbers described?
+
+See L</error_message()> and L</error_number()>.
+
 =head2 How do I escape delimiters?
 
 By backslash-escaping the character(s) of any delimiters which appear in the string.
@@ -1038,9 +1089,9 @@ This printout includes:
 
 =item o The parse result (0 => success, 1 => failure)
 
-=item o The terminals expected if the parse is ambiguous
+=item o The ambiguity satus and terminals expected, if the parse is ambiguous
 
-Ambiguity is not, in and of itself, an error.
+Ambiguity is not, in and of itself, an error. But see C<ambiguity_is_fatal>, below.
 
 =back
 
@@ -1068,6 +1119,12 @@ This means nesting of identical opening delimiters is fatal.
 So, using C<nesting_is_fatal> means 'a <: b <: c :> d :> e' would be a fatal error.
 
 It's value is 8.
+
+=item o ambiguity_is_fatal
+
+This triggers a call ti 'die' if the parse is ambiguous.
+
+It's value is 16.
 
 =back
 
