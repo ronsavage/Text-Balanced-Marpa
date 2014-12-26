@@ -794,7 +794,7 @@ for help on unpacking and installing distros.
 
 =head1 Installation
 
-Install L<Text::Balanced::Marpa> as you would for C<Perl> module:
+Install L<Text::Balanced::Marpa> as you would any C<Perl> module:
 
 Run:
 
