@@ -965,9 +965,9 @@ See L</Constructor and Initialization> for details on the parameters accepted by
 
 =head2 next_few_chars($s, $offset)
 
-Returns a substring of $s, starting at $offset, for use in progress messages.
+Returns a substring of $s, starting at $offset, for use in debug messages.
 
-The default string length returned is 20 characters.
+See L<next_few_limit([$integer])>.
 
 =head2 next_few_limit([$integer])
 
