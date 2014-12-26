@@ -8,11 +8,11 @@ use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 use Const::Exporter constants =>
 [
 	nothing_is_fatal => 0,
-	overlap_is_fatal => 1,
-	nesting_is_fatal => 2,
+	debug            => 1,
+	print_warnings   => 2,
+	overlap_is_fatal => 4,
+	nesting_is_fatal => 8,
 ];
-
-use Log::Handler;
 
 use Marpa::R2;
 
@@ -64,6 +64,22 @@ has delimiter_frequency =>
 	required => 0,
 );
 
+has error_message =>
+(
+	default  => sub{return ''},
+	is       => 'rw',
+	isa      => Str,
+	required => 0,
+);
+
+has error_number =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
+	required => 0,
+);
+
 has grammar =>
 (
 	default  => sub {return ''},
@@ -80,35 +96,11 @@ has known_events =>
 	required => 0,
 );
 
-has logger =>
-(
-	default  => sub{return undef},
-	is       => 'rw',
-	isa      => Any,
-	required => 0,
-);
-
 has matching_delimiter =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
 	isa      => HashRef,
-	required => 0,
-);
-
-has maxlevel =>
-(
-	default  => sub{return 'notice'},
-	is       => 'rw',
-	isa      => Str,
-	required => 0,
-);
-
-has minlevel =>
-(
-	default  => sub{return 'error'},
-	is       => 'rw',
-	isa      => Str,
 	required => 0,
 );
 
@@ -175,22 +167,6 @@ our $VERSION = '1.00';
 sub BUILD
 {
 	my($self) = @_;
-
-	# Define logger before validation so we can see the error messages.
-
-	if (! defined $self -> logger)
-	{
-		$self -> logger(Log::Handler -> new);
-		$self -> logger -> add
-		(
-			screen =>
-			{
-				maxlevel       => $self -> maxlevel,
-				message_layout => '%m',
-				minlevel       => $self -> minlevel,
-			}
-		);
-	}
 
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
 	#
@@ -278,16 +254,6 @@ sub _add_daughter
 
 # ------------------------------------------------
 
-sub log
-{
-	my($self, $level, $s) = @_;
-
-	$self -> logger -> log($level => $s) if ($self -> logger);
-
-} # End of log.
-
-# ------------------------------------------------
-
 sub next_few_chars
 {
 	my($self, $s, $offset) = @_;
@@ -330,28 +296,27 @@ sub parse
 	{
 		if (defined (my $value = $self -> _process) )
 		{
-			$self -> log(info => 'Parsed text:');
-			$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
+			print "Parsed text:\n" if ($self -> options & print_warnings);
 		}
 		else
 		{
 			$result = 1;
 
-			$self -> log(error => 'Parse failed');
-			$self -> log(info => 'Parsed text:');
-			$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
+			print "Error: Parse failed\nText parsed so far:\n";
 		}
 	}
 	catch
 	{
 		$result = 1;
 
-		$self -> log(error => "Parse failed. $_");
-		$self -> log(info => 'Parsed text:');
-		$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
+		print "Error: Parse failed. ${_}Text parsed so far:\n";
 	};
 
-	$self -> log(info => "Parse result:  $result (0 is success)");
+	if ($self -> options & print_warnings)
+	{
+		print join("\n", @{$self -> tree -> tree2string}), "\n";
+		print "Parse result: $result (0 is success)\n";
+	}
 
 	# Return 0 for success and 1 for failure.
 
@@ -380,13 +345,16 @@ sub _process
 	my($string)             = $self -> text || ''; # Allow for undef.
 	my($length)             = length $string;
 	my($text)               = '';
-	my($format)             = '%-20s    %5s    %5s    %5s    %-20s    %-20s';
+	my($format)             = "%-20s    %5s    %5s    %5s    %-20s    %-20s\n";
 	my($last_event)         = '';
 	my($pos)                = 0;
 	my($matching_delimiter) = $self -> matching_delimiter;
 
-	$self -> log(debug => "Length of input: $length. Input |$string|");
-	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment') );
+	if ($self -> options & debug)
+	{
+		print "Length of input: $length. Input |$string|\n";
+		print sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment');
+	}
 
 	my($delimiter_frequency, $delimiter_stack);
 	my($event_name);
@@ -417,7 +385,7 @@ sub _process
 
 		die "Error: lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
-		$self -> log(debug => sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') );
+		print sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') if ($self -> options & debug);
 
 		if ($event_name ne 'string')
 		{
@@ -443,11 +411,16 @@ sub _process
 			{
 				$message = "Last open delimiter: $$tos{lexeme}. Unexpected closing delimiter: $lexeme";
 
+				$self -> error_message($message);
+				$self -> error_number(1);
+
 				die "Error: $message\n" if ($self -> options & overlap_is_fatal);
 
 				# If we did not die, then it's a warning message.
 
-				$self -> log(warning => "Warning: $message");
+				$self -> error_number(-1);
+
+				print "Warning: $message\n" if ($self -> options & print_warnings);
 			}
 
 			$self -> _pop_node_stack;
@@ -460,9 +433,20 @@ sub _process
 			# If the top of the delimiter stack reaches 2, then there's an error.
 			# Unlink mismatched delimiters (just above), this is never gets a warning.
 
-			if ( ($self -> options & nesting_is_fatal) && ($$delimiter_frequency{$$matching_delimiter{$lexeme} } > 1) )
+			if ($$delimiter_frequency{$$matching_delimiter{$lexeme} } > 1)
 			{
-				die "Error: Opened delimiter $lexeme again before closing previous one\n";
+				$message = "Opened delimiter $lexeme again before closing previous one";
+
+				$self -> error_message($message);
+				$self -> error_number(2);
+
+				die "Error: $message\n" if ($self -> options & nesting_is_fatal);
+
+				# If we did not die, then it's a warning message.
+
+				$self -> error_number(-2);
+
+				print "Warning: $message\n" if ($self -> options & print_warnings);
 			}
 
 			$self -> delimiter_frequency($delimiter_frequency);
@@ -495,8 +479,15 @@ sub _process
 		my($terminals) = $self -> recce -> terminals_expected;
 		$terminals     = ['(None)'] if ($#$terminals < 0);
 
-		$self -> log(info => 'Terminals expected: ' . join(', ', @$terminals) );
-		$self -> log(info => "Parse is ambiguous. Status: $ambiguous_status");
+		if ($self -> options & print_warnings)
+		{
+			$message = 'Terminals expected: ' . join(', ', @$terminals);
+
+			$self -> error_message($message);
+			$self -> error_number(-3);
+
+			print "$message\nParse is ambiguous. Status: $ambiguous_status\n";
+		}
 	}
 
 	# Return a defined value for success and undef for failure.
@@ -544,7 +535,7 @@ sub _validate_event
 	my($message)       = "Location: ($line, $column). Lexeme: |$lexeme|. Next few chars: |$literal|";
 	$message           = "$message. Events: $event_count. Names: ";
 
-	$self -> log(debug => $message . join(', ', @event_name) . '.');
+	print $message, join(', ', @event_name), "\n" if ($self -> options & debug);
 
 	my(%event_name);
 
@@ -563,7 +554,7 @@ sub _validate_event
 		{
 			$event_name = $$delimiter_action{$lexeme};
 
-			$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
+			print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
 		}
 		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
 		{
@@ -575,13 +566,13 @@ sub _validate_event
 			{
 				$event_name = 'open_delim';
 
-				$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
+				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
 			}
 			else
 			{
 				$event_name = 'close_delim';
 
-				$self -> log(debug => "Disambiguated lexeme |$lexeme| as '$event_name'");
+				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
 			}
 		}
 		else
@@ -766,34 +757,6 @@ A value for this option is mandatory.
 
 Default: None.
 
-=item o logger => $aLoggerObject
-
-Specify a logger compatible with L<Log::Handler>, for the lexer and parser to use.
-
-Default: A logger of type L<Log::Handler> which writes to the screen.
-
-To disable logging, just set 'logger' to the empty string (not undef).
-
-=item o maxlevel => $logOption1
-
-This option affects L<Log::Handler>.
-
-Typical values are 'notice' (the default), 'info' and 'debug'.
-
-See the L<Log::Handler::Levels> docs.
-
-Default: 'notice'.
-
-=item o minlevel => $logOption2
-
-This option affects L<Log::Handler>.
-
-See the L<Log::Handler::Levels> docs.
-
-Default: 'error'.
-
-No lower levels are used.
-
 =item o open => $arrayref
 
 An arrayref of strings, each one an opening delimiter.
@@ -845,52 +808,60 @@ times each delimiter appears in the input stream.
 
 The value is incremented for each opening delimiter and decremented for each closing delimiter.
 
+=head2 error_message()
+
+Returns the last error message set when the code died.
+
+Parsing error strings is never a good idea, ever though this one's format is fixed.
+
+See L</error_number()>.
+
+=head2 error_number()
+
+Returns the last error number set.
+
+Warnings have values < 0, and errors have values > 0.
+
+Current values possible:
+
+=over 4
+
+=item o -3 => 'Terminals expected: ' . join(', ', @$terminals)
+
+This is a warning.
+
+=item o -2 => Opened delimiter $lexeme again before closing previous one"
+
+This is a warning.
+
+=item o -1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
+
+This is a warning.
+
+=item o 0 => Successful parse
+
+This is the default value.
+
+=item o 1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
+
+This is an error. The code calls C<die>.
+
+=item o 2 => Opened delimiter $lexeme again before closing previous one"
+
+This is an error. The code calls C<die>.
+
+=back
+
+See L</error_message()>.
+
 =head2 known_events()
 
 Returns a hashref where the keys are event names and the values are 1.
-
-=head2 log($level, $s)
-
-If a logger is defined, this logs the message $s at level $level.
-
-=head2 logger([$logger_object])
-
-Here, the [] indicate an optional parameter.
-
-Get or set the logger object.
-
-To disable logging, just set 'logger' to the empty string (not undef), in the call to L</new()>.
-
-This logger is passed to other modules.
-
-'logger' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head2 matching_delimiter()
 
 Returns a hashref where the keys are opening delimiters and the values are the corresponding closing
 delimiters.
-
-=head2 maxlevel([$string])
-
-Here, the [] indicate an optional parameter.
-
-Get or set the value used by the logger object.
-
-This option is only used if an object of type L<Log::Handler> is created.
-See L<Log::Handler::Levels>.
-
-'maxlevel' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
-
-=head2 minlevel([$string])
-
-Here, the [] indicate an optional parameter.
-
-Get or set the value used by the logger object.
-
-This option is only used if an object of type L<Log::Handler> is created.
-See L<Log::Handler::Levels>.
-
-'minlevel' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head2 new()
 
@@ -1003,6 +974,34 @@ This is the default.
 
 It's value is 0.
 
+=item o debug
+
+Print extra stuff if this flag is set.
+
+It's value is 1.
+
+=item o print_warnings
+
+Print various warnings if this flag is set.
+
+This printout includes:
+
+=over 4
+
+=item o The tree representing the parse at the end of the run, successful or otherwise
+
+=item o The parse result (0 => success, 1 => failure)
+
+=item o The terminals expected if the parse is ambiguous
+
+Ambiguity is not, in and of itself, an error.
+
+=back
+
+It's tempting to call this option C<warnings>, but Perl already has C<use warnings>, so I didn't.
+
+It's value is 2.
+
 =item o overlap_is_fatal
 
 This means overlapping delimiters cause a fatal error.
@@ -1014,7 +1013,7 @@ if you try to use the delimiters of '<' and '>' for HTML. That is, '<i><b>Bold I
 not an error because what overlap are '<b>' and '</i>' BUT THEY ARE NOT TAGS. The tags are '<' and
 '>', ok? See also t/html.t.
 
-It's value is 1.
+It's value is 4.
 
 =item o nesting_is_fatal
 
@@ -1022,7 +1021,7 @@ This means nesting of identical opening delimiters is fatal.
 
 So, using C<nesting_is_fatal> means 'a <: b <: c :> d :> e' would be a fatal error.
 
-It's value is 2.
+It's value is 8.
 
 =back
 
