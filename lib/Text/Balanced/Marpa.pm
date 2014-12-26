@@ -1140,9 +1140,11 @@ This runs both standard and author tests:
 
 =over 4
 
-=item o Error reporting
+=item o Advanced error reporting
 
 See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11/delimiter.html>.
+
+Perhaps this could be a sub-class?
 
 =back
 
