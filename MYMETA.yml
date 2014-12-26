@@ -1,5 +1,5 @@
 ---
-abstract: 'A Marpa-based parser for Graphviz dot files'
+abstract: 'Extract delimited text sequences from strings'
 author:
   - 'Ron Savage <ron@savage.net.au>'
 build_requires:
@@ -12,23 +12,11 @@ license: artistic_2
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: '1.4'
-name: GraphViz2-Marpa
+name: Text-Balanced-Marpa
 provides:
-  GraphViz2::Marpa:
-    file: lib/GraphViz2/Marpa.pm
-    version: '2.03'
-  GraphViz2::Marpa::Config:
-    file: lib/GraphViz2/Marpa/Config.pm
-    version: '2.03'
-  GraphViz2::Marpa::Demo:
-    file: lib/GraphViz2/Marpa/Demo.pm
-    version: '2.03'
-  GraphViz2::Marpa::Renderer::Graphviz:
-    file: lib/GraphViz2/Marpa/Renderer/Graphviz.pm
-    version: '2.03'
-  GraphViz2::Marpa::Utils:
-    file: lib/GraphViz2/Marpa/Utils.pm
-    version: '2.03'
+  Text::Balanced::Marpa:
+    file: lib/Text/Balanced/Marpa.pm
+    version: '1.00'
 requires:
   Log::Handler: '0.71'
   Marpa::R2: '2.096'
@@ -41,5 +29,5 @@ requires:
   warnings: '0'
 resources:
   license: http://www.perlfoundation.org/artistic_license_2_0
-  repository: https://github.com/ronsavage/GraphViz2-Marpa
-version: '2.03'
+  repository: https://github.com/ronsavage/Text-Balanced-Marpa
+version: '1.00'

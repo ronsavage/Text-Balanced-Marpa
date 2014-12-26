@@ -1,5 +1,5 @@
 {
-   "abstract" : "A Marpa-based parser for Graphviz dot files",
+   "abstract" : "Extract delimited text sequences from strings",
    "author" : [
       "Ron Savage <ron@savage.net.au>"
    ],
@@ -12,7 +12,7 @@
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
       "version" : "2"
    },
-   "name" : "GraphViz2-Marpa",
+   "name" : "Text-Balanced-Marpa",
    "prereqs" : {
       "build" : {
          "requires" : {
@@ -39,25 +39,9 @@
       }
    },
    "provides" : {
-      "GraphViz2::Marpa" : {
-         "file" : "lib/GraphViz2/Marpa.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Config" : {
-         "file" : "lib/GraphViz2/Marpa/Config.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Demo" : {
-         "file" : "lib/GraphViz2/Marpa/Demo.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Renderer::Graphviz" : {
-         "file" : "lib/GraphViz2/Marpa/Renderer/Graphviz.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Utils" : {
-         "file" : "lib/GraphViz2/Marpa/Utils.pm",
-         "version" : "2.03"
+      "Text::Balanced::Marpa" : {
+         "file" : "lib/Text/Balanced/Marpa.pm",
+         "version" : "1.00"
       }
    },
    "release_status" : "stable",
@@ -66,8 +50,8 @@
          "http://www.perlfoundation.org/artistic_license_2_0"
       ],
       "repository" : {
-         "url" : "https://github.com/ronsavage/GraphViz2-Marpa"
+         "url" : "https://github.com/ronsavage/Text-Balanced-Marpa"
       }
    },
-   "version" : "2.03"
+   "version" : "1.00"
 }

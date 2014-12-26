@@ -12,8 +12,8 @@ use Text::Balanced::Marpa ':constants';
 my($count)  = 0;
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open    => ['<', '{', '[', '(', '"'],
-	close   => ['>', '}', ']', ')', '"'],
+	open    => ['<', '{', '[', '(', '"', "'"],
+	close   => ['>', '}', ']', ')', '"', "'"],
 	options => overlap_is_fatal,
 );
 my(@text) =
@@ -29,6 +29,7 @@ my(@text) =
 	q|a [b [c] d] e|,
 	q|a {b [c] d} e|,
 	q|a <b {c [d (e "f") g] h} i> j|,
+	q|Do you realize I said "I sang 'Δ Lady'" at the karaoke bar? [Contains UTF8]|,
 );
 
 my($result);
@@ -50,7 +51,7 @@ for my $text (@text)
 		ok($result == 0, "Parsed $text");
 	}
 
-	#diag join("\n", @{$parser -> tree -> tree2string});
+	diag join("\n", @{$parser -> tree -> tree2string});
 }
 
 done_testing($count);

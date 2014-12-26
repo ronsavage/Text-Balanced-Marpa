@@ -10,6 +10,15 @@ META.json
 META.yml
 README
 scripts/pod2html.sh
-scripts/test.pl
-t/test.t
+scripts/samples.pl
+t/angle.brackets.t
+t/braces.t
+t/brackets.t
+t/colons.t
+t/double.quotes.t
+t/html.t
+t/multiple.quotes.t
+t/parenthises.t
+t/percents.t
+t/single.quotes.t
 xt/author/pod.t

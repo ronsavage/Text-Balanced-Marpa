@@ -29,6 +29,7 @@ my(%params) =
 	PL_FILES  => {},
 	PREREQ_PM =>
 	{
+		'Const::Exporter' => 'v0.2.3',
 		'Log::Handler'    => 0.71,
 		'Marpa::R2'       => 2.096000,
 		'Moo'             => 1.006000,

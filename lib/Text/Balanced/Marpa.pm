@@ -949,15 +949,6 @@ See the L</FAQ> for details and warnings.
 
 'open' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=head2 parse()
-
-This is the only method the caller needs to call. All parameters are supplied to L</new()>
-(or via other methods before C<parse()> is called).
-
-See scripts/samples.pl.
-
-Returns 0 for success and 1 for failure.
-
 =head2 options([$bit_string])
 
 Here, the [] indicate an optional parameter.
@@ -968,7 +959,16 @@ Get or set the option flags.
 
 See L</FAQ> for details.
 
-=item o tree()
+=head2 parse()
+
+This is the only method the caller needs to call. All parameters are supplied to L</new()>
+(or via other methods before C<parse()> is called).
+
+See scripts/samples.pl.
+
+Returns 0 for success and 1 for failure.
+
+=head2 tree()
 
 Returns an object of type L<Tree::DAG_Node>, which holds the parsed data.
 
@@ -983,6 +983,10 @@ Get or set the string to be parsed.
 'text' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head1 FAQ
+
+=head2 Does this package support Unicode/UTF8?
+
+Yes. See t/multiple.quotes.t.
 
 =head2 Warning: calling open() and close() after calling new
 
@@ -1015,6 +1019,8 @@ Firstly, to make these constants available, you must say:
 
 Secondly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/multiple.quotes.t,
 t/percents.t and scripts/samples.pl.
+
+Now the flags themselves:
 
 =over 4
 
@@ -1096,21 +1102,21 @@ The tree does not preserve the nested nature of HTML/XML.
 
 Post-processing (valid) HTML could easily generate another view of the data.
 
+And anyway, to get perfect HTML you'd be grabbing the output of L<Marpa::R2::HTML>, right?
+
+See t/html.t for a trivial HTML parser.
+
 =head2 What is the homepage of Marpa?
 
 L<http://savage.net.au/Marpa.html>.
 
 That page has a long list of links.
 
-=head2 Does this package support Unicode?
-
-Yes.
-
 =head2 How do I run author tests?
 
 This runs both standard and author tests:
 
-	shell> perl Build.PL; ./Build; ./Build test; ./Build authortest
+	shell> perl Build.PL; ./Build; ./Build authortest
 
 =head1 TODO
 

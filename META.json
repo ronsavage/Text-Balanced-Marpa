@@ -1,5 +1,5 @@
 {
-   "abstract" : "A Marpa-based parser for Graphviz dot files",
+   "abstract" : "Extract delimited text sequences from strings",
    "author" : [
       "Ron Savage <ron@savage.net.au>"
    ],
@@ -12,7 +12,7 @@
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
       "version" : "2"
    },
-   "name" : "GraphViz2-Marpa",
+   "name" : "Text-Balanced-Marpa",
    "prereqs" : {
       "build" : {
          "requires" : {
@@ -26,57 +26,22 @@
       },
       "runtime" : {
          "requires" : {
-            "Algorithm::Diff" : "1.1902",
-            "Capture::Tiny" : "0.25",
-            "Config" : "0",
-            "Config::Tiny" : "2.14",
-            "Date::Format" : "2.24",
-            "Date::Simple" : "3.03",
-            "File::Basename" : "2.84",
-            "File::Copy" : "2.26",
-            "File::HomeDir" : "1",
-            "File::Spec" : "3.4",
-            "File::Temp" : "0.2301",
-            "Getopt::Long" : "2.38",
-            "HTML::Entities::Interpolate" : "1.04",
             "Log::Handler" : "0.71",
             "Marpa::R2" : "2.096",
             "Moo" : "1.006",
-            "Path::Iterator::Rule" : "1.008",
-            "Path::Tiny" : "0.061",
-            "Pod::Usage" : "1.36",
-            "Text::Xslate" : "1.4001",
-            "Tree::DAG_Node" : "1.07",
+            "Tree::DAG_Node" : "1.23",
             "Try::Tiny" : "0.09",
             "Types::Standard" : "1.000004",
             "open" : "0",
-            "perl" : "5.014002",
             "strict" : "0",
-            "utf8" : "0",
             "warnings" : "0"
          }
       }
    },
    "provides" : {
-      "GraphViz2::Marpa" : {
-         "file" : "lib/GraphViz2/Marpa.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Config" : {
-         "file" : "lib/GraphViz2/Marpa/Config.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Demo" : {
-         "file" : "lib/GraphViz2/Marpa/Demo.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Renderer::Graphviz" : {
-         "file" : "lib/GraphViz2/Marpa/Renderer/Graphviz.pm",
-         "version" : "2.03"
-      },
-      "GraphViz2::Marpa::Utils" : {
-         "file" : "lib/GraphViz2/Marpa/Utils.pm",
-         "version" : "2.03"
+      "Text::Balanced::Marpa" : {
+         "file" : "lib/Text/Balanced/Marpa.pm",
+         "version" : "1.00"
       }
    },
    "release_status" : "stable",
@@ -85,8 +50,8 @@
          "http://www.perlfoundation.org/artistic_license_2_0"
       ],
       "repository" : {
-         "url" : "https://github.com/ronsavage/GraphViz2-Marpa"
+         "url" : "https://github.com/ronsavage/Text-Balanced-Marpa"
       }
    },
-   "version" : "2.03"
+   "version" : "1.00"
 }
