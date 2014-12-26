@@ -278,45 +278,6 @@ sub _add_daughter
 
 # ------------------------------------------------
 
-sub _decode_result
-{
-	my($self, $result) = @_;
-	my(@worklist)      = $result;
-
-	my($obj);
-	my($ref_type);
-	my(@stack);
-
-	do
-	{
-		$obj      = shift @worklist;
-		$ref_type = ref $obj;
-
-		if ($ref_type eq 'ARRAY')
-		{
-			unshift @worklist, @$obj;
-		}
-		elsif ($ref_type eq 'HASH')
-		{
-			push @stack, {%$obj};
-		}
-		elsif ($ref_type)
-		{
-			die "Error: Unsupported object type $ref_type\n";
-		}
-		else
-		{
-			push @stack, $obj;
-		}
-
-	} while (@worklist);
-
-	return join('', @stack);
-
-} # End of _decode_result.
-
-# ------------------------------------------------
-
 sub log
 {
 	my($self, $level, $s) = @_;
@@ -643,15 +604,14 @@ sub validate_open_close
 
 	die "Error: # of open delims must match # of close delims\n" if ($#$open != $#$close);
 
-	my(%substitute)     = (close => '', delim => '', open => '');
+	my(%substitute)         = (close => '', delim => '', open => '');
 	my($matching_delimiter) = {};
-	my(%seen)           = (close => {}, open => {});
+	my(%seen)               = (close => {}, open => {});
 
 	my($close_quote);
-	my(%delimiter_action);
+	my(%delimiter_action, %delimiter_frequency);
 	my($open_quote);
 	my($prefix, %prefix);
-	my(%delimiter_frequency);
 
 	for my $i (0 .. $#$open)
 	{
@@ -663,7 +623,7 @@ sub validate_open_close
 
 		$delimiter_action{$$open[$i]}     = 'open';
 		$delimiter_action{$$close[$i]}    = 'close';
-		$$matching_delimiter{$$open[$i]}      = $$close[$i];
+		$$matching_delimiter{$$open[$i]}  = $$close[$i];
 		$delimiter_frequency{$$open[$i]}  = 0;
 		$delimiter_frequency{$$close[$i]} = 0;
 
@@ -689,8 +649,8 @@ sub validate_open_close
 			$close_quote = "'$$close[$i]'";
 		}
 
-		$substitute{open}  .= "open_delim\t\t\t\~ $open_quote\n";
-		$substitute{close} .= "close_delim\t\t\t\~ $close_quote\n";
+		$substitute{open}  .= "open_delim\t\t\t\~ $open_quote\n"   if ($seen{open}{$$open[$i]} <= 1);
+		$substitute{close} .= "close_delim\t\t\t\~ $close_quote\n" if ($seen{close}{$$close[$i]} <= 1);
 		$prefix            = substr($$open[$i], 0, 1);
 		$prefix            = "\\$prefix" if ($prefix =~ /[\[\]]/);
 		$prefix{$prefix}   = 0 if (! $prefix{$prefix});
@@ -710,17 +670,6 @@ sub validate_open_close
 	$self -> delimiter_action(\%delimiter_action);
 	$self -> delimiter_frequency(\%delimiter_frequency);
 	$self -> matching_delimiter($matching_delimiter);
-
-	for my $key (keys %seen)
-	{
-		for my $delim (keys %{$seen{$key} })
-		{
-			if ( ($delim ne '"') && ($seen{$key}{$delim} != 1) )
-			{
-				die "Error: $key delim $delim occurs $seen{$key}{$delim} times\n"
-			}
-		}
-	}
 
 	return \%substitute;
 
@@ -747,7 +696,19 @@ The L</FAQ> discusses the way the parsed data is stored in RAM.
 L<Text::Balanced::Marpa> provides a L<Marpa::R2>-based parser for extracting delimited text
 sequences from strings.
 
-L<Marpa's homepage|http://savage.net.au/Marpa.html>.
+See the L</FAQ> for various topics, including:
+
+=over 4
+
+=item o UFT8 handling
+
+=item o Escaping delimiters within the text
+
+=item o Options to make nested and/or overlapped delimiters fatal errors
+
+=item o Using delimiters which occur as part of another delimiter
+
+=back
 
 =head1 Distributions
 
@@ -996,6 +957,10 @@ See t/escapes.t.
 
 Yes. See t/escapes.t and t/multiple.quotes.t.
 
+=head2 Does this package handler Perl delimiters (e.g. q|..|, qq|..|, qr/../, qw/../)?
+
+See t/perl.delimiters.t.
+
 =head2 Warning: calling open() and close() after calling new
 
 Don't do that.
@@ -1025,8 +990,8 @@ Firstly, to make these constants available, you must say:
 
 	use Text::Balanced::Marpa ':constants';
 
-Secondly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/multiple.quotes.t,
-t/percents.t and scripts/samples.pl.
+Secondly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/escapes.t,
+t/multiple.quotes.t, t/percents.t and scripts/samples.pl.
 
 Now the flags themselves:
 
@@ -1133,28 +1098,6 @@ This runs both standard and author tests:
 =item o Error reporting
 
 See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11/delimiter.html>.
-
-=item o Parameters to new() to specify delimiters
-
-=item o Extensible grammar based on user-supplied delimiters
-
-=item o UTF8 data in samples.pl
-
-=item o Implement some other delimiters
-
-=over 4
-
-=item o Asymmetric quotes
-
-E.g.: 'q|' and '|'.
-
-=item o Back-ticks
-
-=item o Hashes
-
-=item o Slashes
-
-=back
 
 =back
 
