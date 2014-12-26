@@ -7,11 +7,11 @@ use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 
 use Const::Exporter constants =>
 [
-	nothing_is_fatal   => 0,
-	debug              => 1,
-	print_warnings     => 2,
-	overlap_is_fatal   => 4,
-	nesting_is_fatal   => 8,
+	nothing_is_fatal   =>  0, # The default.
+	debug              =>  1,
+	print_warnings     =>  2,
+	overlap_is_fatal   =>  4,
+	nesting_is_fatal   =>  8,
 	ambiguity_is_fatal => 16,
 ];
 
@@ -896,7 +896,7 @@ The value is incremented for each opening delimiter and decremented for each clo
 
 Returns the last error or warning message set when the code died.
 
-Error messages always start with 'Error: ', but never end with "\n".
+Error messages always start with 'Error: '. No message ends with "\n".
 
 Parsing error strings is not a good idea, ever though this module's format for them is fixed.
 
@@ -908,38 +908,35 @@ Returns the last error or warning number set.
 
 Warnings have values < 0, and errors have values > 0.
 
+If the value is > 0, the code calls 'die', and the message has the prefix 'Error: '.
+
 Current values:
 
 =over 4
-
-=item o -3 => 'Ambiguous parse. Status: $status. Terminals expected: a, b, ...'
-
-This is a warning unless you set the option C<ambiguity_is_fatal> to make it fatal.
-In that case, the value is 3.
-
-It's only produced when the parse is ambiguous.
-
-=item o -2 => Opened delimiter $lexeme again before closing previous one"
-
-This is a warning unless you set the option C<nesting_is_fatal> to make it fatal.
-In that case, the value is 2.
-
-=item o -1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
-
-This is a warning unless you set the option C<overlap_is_fatal> to make it fatal.
-In that case, the value is 1.
 
 =item o 0 => Successful parse
 
 This is the default value.
 
-=item o 1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
+=item o 1/-1 => "Last open delimiter: $lexeme_1. Unexpected closing delimiter: $lexeme_2"
 
-This is an error if you set the option C<overlap_is_fatal> to make it fatal. The code calls C<die>.
+If L</error_number()> returns 1, it's an error, and if it returns -1 it's a warning.
 
-=item o 2 => Opened delimiter $lexeme again before closing previous one"
+You can set the option C<overlap_is_fatal> to make it fatal.
 
-This is an error if you set the option C<overlap_is_fatal> to make it fatal. The code calls C<die>.
+=item o 2/-2 => Opened delimiter $lexeme again before closing previous one"
+
+If L</error_number()> returns 2, it's an error, and if it returns -2 it's a warning.
+
+You can set the option C<nesting_is_fatal> to make it fatal.
+
+=item o 3/-3 => 'Ambiguous parse. Status: $status. Terminals expected: a, b, ...'
+
+This message is only produced when the parse is ambiguous.
+
+If L</error_number()> returns 3, it's an error, and if it returns -3 it's a warning.
+
+You can set the option C<ambiguity_is_fatal> to make it fatal.
 
 =back
 
@@ -1091,7 +1088,7 @@ This printout includes:
 
 =item o The ambiguity satus and terminals expected, if the parse is ambiguous
 
-Ambiguity is not, in and of itself, an error. But see C<ambiguity_is_fatal>, below.
+Ambiguity is not, in and of itself, an error. But see the C<ambiguity_is_fatal> option, below.
 
 =back
 
@@ -1103,7 +1100,7 @@ It's value is 2.
 
 This means overlapping delimiters cause a fatal error.
 
-So, using C<overlap_is_fatal> means '{Bold [Italic}]' would be a fatal error.
+So, setting C<overlap_is_fatal> means '{Bold [Italic}]' would be a fatal error.
 
 I use this example since it gives me the opportunity to warn you, this will I<not> do what you want
 if you try to use the delimiters of '<' and '>' for HTML. That is, '<i><b>Bold Italic</i></b>' is
@@ -1122,7 +1119,7 @@ It's value is 8.
 
 =item o ambiguity_is_fatal
 
-This triggers a call ti 'die' if the parse is ambiguous.
+This triggers a call to 'die' if the parse is ambiguous.
 
 It's value is 16.
 
