@@ -715,7 +715,7 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 		if ($count == 3)
 		{
-			print "Deliberate error: Failed to parse $text\n";
+			print "Deliberate error: Failed to parse |$text|\n";
 			print 'Error number: ', $parser -> error_number, '. Error message: ', $parser -> error_message, "\n";
 		}
 
