@@ -129,9 +129,9 @@ has options =>
 	required => 0,
 );
 
-has overlapping_delimiters =>
+has next_few_limit =>
 (
-	default  => sub{return 0},
+	default  => sub{return 20},
 	is       => 'rw',
 	isa      => Int,
 	required => 0,
@@ -258,7 +258,7 @@ sub _add_daughter
 sub next_few_chars
 {
 	my($self, $s, $offset) = @_;
-	$s = substr($s, $offset, 20);
+	$s = substr($s, $offset, $self -> next_few_limit);
 	$s =~ tr/\n/ /;
 	$s =~ s/^\s+//;
 	$s =~ s/\s+$//;
@@ -841,6 +841,14 @@ A value for this option is mandatory.
 
 Default: None.
 
+=item o next_few_limit => $integer
+
+This controls how many characters are printed when displaying 'the next few chars'.
+
+It only affects debug output.
+
+Default: 20.
+
 =item o open => $arrayref
 
 An arrayref of strings, each one an opening delimiter.
@@ -960,6 +968,14 @@ See L</Constructor and Initialization> for details on the parameters accepted by
 Returns a substring of $s, starting at $offset, for use in progress messages.
 
 The default string length returned is 20 characters.
+
+=head2 next_few_limit([$integer])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the number of characters called 'the next few chars', which are printed during debugging.
+
+'next_few_limit' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head2 open()
 
