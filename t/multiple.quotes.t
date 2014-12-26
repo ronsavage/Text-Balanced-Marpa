@@ -51,7 +51,7 @@ for my $text (@text)
 		ok($result == 0, "Parsed $text");
 	}
 
-	diag join("\n", @{$parser -> tree -> tree2string});
+	#diag join("\n", @{$parser -> tree -> tree2string});
 }
 
 done_testing($count);

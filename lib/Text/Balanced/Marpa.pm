@@ -984,9 +984,17 @@ Get or set the string to be parsed.
 
 =head1 FAQ
 
+=head2 How do I escape delimiters?
+
+By backslash-escaping the character(s) of any delimiters which appear in the string.
+
+The backslash is preserved in the output.
+
+See t/escapes.t.
+
 =head2 Does this package support Unicode/UTF8?
 
-Yes. See t/multiple.quotes.t.
+Yes. See t/escapes.t and t/multiple.quotes.t.
 
 =head2 Warning: calling open() and close() after calling new
 
