@@ -1,6 +1,7 @@
 package Text::Balanced::Marpa;
 
 use strict;
+use utf8;
 use warnings;
 use warnings qw(FATAL utf8); # Fatalize encoding glitches.
 use open     qw(:std :utf8); # Undeclared streams in UTF-8.
@@ -1074,7 +1075,7 @@ See t/escapes.t.
 
 =head2 Does this package support Unicode/UTF8?
 
-Yes. See t/escapes.t and t/multiple.quotes.t.
+Yes. See t/escapes.t, t/multiple.quotes.t and t/utf8.t.
 
 =head2 Does this package handler Perl delimiters (e.g. q|..|, qq|..|, qr/../, qw/../)?
 
@@ -1178,6 +1179,10 @@ This triggers a call to 'die' if the parse is ambiguous.
 It's value is 16.
 
 =back
+
+=head2 How do I make use of the tree built by the parser?
+
+See scripts/walk.down.pl. It is a copy of t/html.t with tree-walking code instead of test code.
 
 =head2 How is the parsed data held in RAM?
 
