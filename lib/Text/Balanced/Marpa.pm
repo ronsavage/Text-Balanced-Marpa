@@ -607,11 +607,32 @@ sub validate_open_close
 
 	my($close_quote);
 	my(%delimiter_action, %delimiter_frequency);
+	my($message);
 	my($open_quote);
 	my($prefix, %prefix);
 
 	for my $i (0 .. $#$open)
 	{
+		if ( ($$open[$i] =~ /\\/) || ($$close[$i] =~ /\\/) )
+		{
+			$message = 'Backslash is forbidden as a delimiter character';
+
+			$self -> error_message($message);
+			$self -> error_number(4);
+
+			die "Error: $message\n";
+		}
+
+		if ( ( (length($$open[$i]) > 1) && ($$open[$i] =~ /'/) ) || ( (length($$close[$i]) > 1) && ($$close[$i] =~ /'/) ) )
+		{
+			$message = 'Single-quotes are forbidden in multi-character delimiters';
+
+			$self -> error_message($message);
+			$self -> error_number(5);
+
+			die "Error: $message\n";
+		}
+
 		$seen{open}{$$open[$i]}   = 0 if (! $seen{open}{$$open[$i]});
 		$seen{close}{$$close[$i]} = 0 if (! $seen{close}{$$close[$i]});
 
@@ -932,19 +953,32 @@ If L</error_number()> returns 1, it's an error, and if it returns -1 it's a warn
 
 You can set the option C<overlap_is_fatal> to make it fatal.
 
-=item o 2/-2 => Opened delimiter $lexeme again before closing previous one"
+=item o 2/-2 => "Opened delimiter $lexeme again before closing previous one"
 
 If L</error_number()> returns 2, it's an error, and if it returns -2 it's a warning.
 
 You can set the option C<nesting_is_fatal> to make it fatal.
 
-=item o 3/-3 => 'Ambiguous parse. Status: $status. Terminals expected: a, b, ...'
+=item o 3/-3 => "Ambiguous parse. Status: $status. Terminals expected: a, b, ..."
 
 This message is only produced when the parse is ambiguous.
 
 If L</error_number()> returns 3, it's an error, and if it returns -3 it's a warning.
 
 You can set the option C<ambiguity_is_fatal> to make it fatal.
+
+=item o 4 => "Backslash is forbidden as a delimiter character"
+
+This preempts some types of sabotage.
+
+This message can never be just a warning message.
+
+=item o 5 => "Single-quotes are forbidden in multi-character delimiters"
+
+This limitation is due to the syntax of
+L<Marpa's DSL|https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/DSL.pod>.
+
+This message can never be just a warning message.
 
 =back
 
@@ -1028,10 +1062,11 @@ See L</error_message()> and L</error_number()>.
 
 =head2 How do I escape delimiters?
 
-By backslash-escaping the character(s) of any delimiters which appear in the string.
+By backslash-escaping the first character of all open and close delimiters which appear in the
+text.
 
-As an example, if the opening delimiter is '<:', this means you have to escape I<all> the '<' chars
-and I<all> the colons in the text.
+As an example, if the delimiters are '<:' and ':>', this means you have to escape I<all> the '<'
+chars and I<all> the colons in the text.
 
 The backslash is preserved in the output.
 
