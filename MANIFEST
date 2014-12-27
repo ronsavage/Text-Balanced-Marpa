@@ -23,5 +23,6 @@ t/multiple.quotes.t
 t/parenthises.t
 t/percents.t
 t/perl.delimiters.t
+t/silly.delimiters.t
 t/single.quotes.t
 xt/author/pod.t
