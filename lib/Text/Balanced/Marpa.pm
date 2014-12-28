@@ -1280,7 +1280,7 @@ See scripts/traverse.pl.
 
 Example usage:
 
-  print map("$_\n", @{$tree->tree2string});
+  print map("$_\n", @{$tree -> tree2string});
 
 Can be called with $some_tree set to any $node, and will print the tree assuming $node is the root.
 
