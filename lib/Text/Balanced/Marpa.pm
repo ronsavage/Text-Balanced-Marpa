@@ -1273,7 +1273,7 @@ The tree does not preserve the nested nature of HTML/XML.
 
 Post-processing (valid) HTML could easily generate another view of the data.
 
-And anyway, to get perfect HTML you'd be grabbing the output of L<Marpa::R2::HTML>, right?
+But anyway, to get perfect HTML you'd be grabbing the output of L<Marpa::R2::HTML>, right?
 
 See scripts/walk.down.pl and t/html.t for a trivial HTML parser.
 
@@ -1305,6 +1305,8 @@ Perhaps this could be a sub-class?
 
 L<Text::Balanced>.
 
+L<Tree::DAG_Node> and L<Tree::DAG_Node::Persist>.
+
 =head1 Machine-Readable Change Log
 
 The file CHANGES was converted into Changelog.ini by L<Module::Metadata::Changes>.
@@ -1320,7 +1322,7 @@ Thanks to Jeffrey Kegler, who wrote Marpa and L<Marpa::R2>.
 And thanks to rns (Ruslan Shvedov) for writing the grammar for double-quoted strings used in
 L<MarpaX::Demo::SampleScripts>'s scripts/quoted.strings.02.pl. I adapted it to HTML (see
 scripts/quoted.strings.05.pl in that module), and then incorporated the grammar into
-L<GraphViz2::Marpa>, and into this module.
+L<GraphViz2::Marpa>, and - after more extensions - into this module.
 
 Lastly, thanks to Robert Rothenberg for L<Const::Exporter>, a module which works the same way
 Perl does.
