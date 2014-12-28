@@ -21,7 +21,7 @@ t/double.quotes.t
 t/escapes.t
 t/html.t
 t/multiple.quotes.t
-t/parenthises.t
+t/parentheses.t
 t/percents.t
 t/perl.delimiters.t
 t/silly.delimiters.t
