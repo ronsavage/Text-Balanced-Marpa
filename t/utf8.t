@@ -33,9 +33,7 @@ for my $text (@text)
 {
 	$count++;
 
-	$parser -> text($text);
-
-	$result = $parser -> parse;
+	$result = $parser -> parse(\$text);
 
 	ok($result == 0, "Parsed $text");
 

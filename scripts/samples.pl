@@ -53,7 +53,7 @@ for my $text (@text)
 		print "Start test  $count. Input |$text|\n";
 	}
 
-	$parser -> text($text);
+	$parser -> text(\$text);
 	$parser -> parse;
 
 	if ($maxlevel ne 'notice')

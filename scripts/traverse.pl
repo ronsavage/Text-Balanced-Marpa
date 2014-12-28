@@ -49,9 +49,7 @@ q|
 </html>
 |;
 
-$parser -> text($text);
-
-if ($parser -> parse == 0)
+if ($parser -> parse(\$text) == 0)
 {
 	my($attributes);
 	my($indent);

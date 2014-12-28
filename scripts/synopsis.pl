@@ -29,9 +29,7 @@ for my $text (@text)
 
 	print "Parsing |$text|\n";
 
-	$parser -> text($text);
-
-	$result = $parser -> parse;
+	$result = $parser -> parse(\$text);
 
 	if ($count == 3)
 	{

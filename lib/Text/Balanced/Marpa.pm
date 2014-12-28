@@ -22,7 +22,7 @@ use Moo;
 
 use Tree;
 
-use Types::Standard qw/Any ArrayRef HashRef Int Str/;
+use Types::Standard qw/Any ArrayRef HashRef Int ScalarRef Str/;
 
 use Try::Tiny;
 
@@ -156,9 +156,9 @@ has tree =>
 
 has text =>
 (
-	default  => sub{return ''},
+	default  => sub{return \''},	# Use ' in comment for UltraEdit.
 	is       => 'rw',
-	isa      => Any,
+	isa      => ScalarRef[Str],
 	required => 0,
 );
 
@@ -283,11 +283,11 @@ sub hashref2string
 
 sub next_few_chars
 {
-	my($self, $s, $offset) = @_;
-	$s = substr($s, $offset, $self -> next_few_limit);
-	$s =~ tr/\n/ /;
-	$s =~ s/^\s+//;
-	$s =~ s/\s+$//;
+	my($self, $stringref, $offset) = @_;
+	my($s) = substr($$stringref, $offset, $self -> next_few_limit);
+	$s     =~ tr/\n/ /;
+	$s     =~ s/^\s+//;
+	$s     =~ s/\s+$//;
 
 	return $s;
 
@@ -316,7 +316,8 @@ sub node2string
 
 sub parse
 {
-	my($self) = @_;
+	my($self, $stringref) = @_;
+	$self -> text($stringref) if (defined $stringref);
 
 	$self -> recce
 	(
@@ -388,8 +389,8 @@ sub _pop_node_stack
 sub _process
 {
 	my($self)               = @_;
-	my($string)             = $self -> text || ''; # Allow for undef.
-	my($length)             = length $string;
+	my($stringref)          = $self -> text || ''; # Allow for undef.
+	my($length)             = length $$stringref;
 	my($text)               = '';
 	my($format)             = "%-20s    %5s    %5s    %5s    %-20s    %-20s\n";
 	my($last_event)         = '';
@@ -398,7 +399,7 @@ sub _process
 
 	if ($self -> options & debug)
 	{
-		print "Length of input: $length. Input |$string|\n";
+		print "Length of input: $length. Input |$$stringref|\n";
 		print sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment');
 	}
 
@@ -416,7 +417,7 @@ sub _process
 
 	for
 	(
-		$pos = $self -> recce -> read(\$string, $pos, $length);
+		$pos = $self -> recce -> read($stringref, $pos, $length);
 		$pos < $length;
 		$pos = $self -> recce -> resume($pos)
 	)
@@ -424,7 +425,7 @@ sub _process
 		$delimiter_frequency       = $self -> delimiter_frequency;
 		$delimiter_stack           = $self -> delimiter_stack;
 		($start, $span)            = $self -> recce -> pause_span;
-		($event_name, $span, $pos) = $self -> _validate_event($string, $start, $span, $pos, $delimiter_frequency);
+		($event_name, $span, $pos) = $self -> _validate_event($stringref, $start, $span, $pos, $delimiter_frequency);
 		$lexeme                    = $self -> recce -> literal($start, $span);
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
@@ -596,14 +597,14 @@ sub tree2string
 
 sub _validate_event
 {
-	my($self, $string, $start, $span, $pos, $delimiter_frequency) = @_;
+	my($self, $stringref, $start, $span, $pos, $delimiter_frequency) = @_;
 	my(@event)         = @{$self -> recce -> events};
 	my($event_count)   = scalar @event;
 	my(@event_name)    = sort map{$$_[0]} @event;
 	my($event_name)    = $event_name[0]; # Default.
-	my($lexeme)        = substr($string, $start, $span);
+	my($lexeme)        = substr($$stringref, $start, $span);
 	my($line, $column) = $self -> recce -> line_column($start);
-	my($literal)       = $self -> next_few_chars($string, $start + $span);
+	my($literal)       = $self -> next_few_chars($stringref, $start + $span);
 	my($message)       = "Location: ($line, $column). Lexeme: |$lexeme|. Next few chars: |$literal|";
 	$message           = "$message. Events: $event_count. Names: ";
 
@@ -803,9 +804,7 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 		print "Parsing |$text|\n";
 
-		$parser -> text($text);
-
-		$result = $parser -> parse;
+		$result = $parser -> parse(\$text);
 
 		if ($count == 3)
 		{
@@ -848,7 +847,7 @@ This is the printout of synopsis.pl:
 	root. Attributes: {}
 	   |--- string. Attributes: {text => "a "}
 	   |--- open. Attributes: {text => "<:"}
-	       |--- string. Attributes: {text => " b "}
+	   |   |--- string. Attributes: {text => " b "}
 	Parse result: 1 (0 is success)
 	Deliberate error: Failed to parse |a <: b <: c :> d :> e|
 	Error number: 2. Error message: Opened delimiter <: again before closing previous one
@@ -943,7 +942,7 @@ C<new()> is called as C<< my($parser) = Text::Balanced::Marpa -> new(k1 => v1, k
 It returns a new object of type C<Text::Balanced::Marpa>.
 
 Key-value pairs accepted in the parameter list (see corresponding methods for details
-[e.g. L<open([$delimiter_list])>]):
+[e.g. L</text([$stringref])>]):
 
 =over 4
 
@@ -987,9 +986,9 @@ Default: 0 (nothing is fatal).
 
 See L</FAQ> for details.
 
-=item o text => $the_string_to_be_parsed
+=item o text => $a_reference_to_the_string_to_be_parsed
 
-Default: ''.
+Default: \''.
 
 =back
 
@@ -1128,7 +1127,7 @@ delimiters.
 
 See L</Constructor and Initialization> for details on the parameters accepted by L</new()>.
 
-=head2 next_few_chars($s, $offset)
+=head2 next_few_chars($stringref, $offset)
 
 Returns a substring of $s, starting at $offset, for use in debug messages.
 
@@ -1184,11 +1183,19 @@ See L</FAQ> for details.
 
 'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=head2 parse()
+=head2 parse([$stringref])
+
+Here, the [] indicate an optional parameter.
 
 This is the only method the user needs to call. All data can be supplied when calling L</new()>.
 
-If you wish, you can call other methods (see L</text([$string])> ) before C<parse()> is called).
+You can of course call other methods (e.g. L</text([$stringref])> ) after calling L</new()> but
+before calling C<parse()>.
+
+Note: If a stringref is passed to C<parse()>, it takes precedence over any stringref passed to
+C<< new(text => $stringref) >>, and over any stringref passed to L</text([$stringref])>. Further,
+the stringref passed to C<parse()> is passed to L</text([$stringref])>, meaning any subsequent
+call to C<text()> returns the stringref passed to C<parse()>.
 
 See scripts/samples.pl.
 
@@ -1196,11 +1203,11 @@ Returns 0 for success and 1 for failure.
 
 If the value is 1, you should call L</error_number()> to find out what happened.
 
-=head2 text([$string])
+=head2 text([$stringref])
 
 Here, the [] indicate an optional parameter.
 
-Get or set the string to be parsed.
+Get or set a reference to the string to be parsed.
 
 'text' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
