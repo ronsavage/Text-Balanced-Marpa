@@ -14,7 +14,7 @@ my($parser)   = Text::Balanced::Marpa -> new
 	open     => ['<', '{', '[', '(', '<:', '[%', '"'],
 	close    => ['>', '}', ']', ')', ':>', '%]', '"'],
 	maxlevel => $maxlevel,
-	options  => overlap_is_fatal, # Diff output after using nothing_is_fatal.
+	options  => overlap_is_fatal | print_warnings, # Diff output after using nothing_is_fatal.
 );
 my(@text) =
 (
@@ -50,7 +50,7 @@ for my $text (@text)
 	if ($maxlevel ne 'notice')
 	{
 		print '-' x 50, "\n";
-		print "Test $count. Text |$text|\n";
+		print "Start test  $count. Input |$text|\n";
 	}
 
 	$parser -> text($text);
@@ -58,6 +58,6 @@ for my $text (@text)
 
 	if ($maxlevel ne 'notice')
 	{
-		print "Test $count. |$text|\n";
+		print "Finish test $count. Input |$text|\n";
 	}
 }

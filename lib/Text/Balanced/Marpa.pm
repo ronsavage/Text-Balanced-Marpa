@@ -190,7 +190,7 @@ input_string			::= quoted_text
 
 quoted_text				::= open_delim input_text close_delim
 
-unquoted_text			::= string
+unquoted_text			::= text
 
 # Lexemes in alphabetical order.
 
@@ -211,8 +211,8 @@ non_quote_char			~ [^_delimiter_]	# Use " in comment for UltraEdit.
 :lexeme					~ open_delim		pause => before		event => open_delim
 _open_
 
-:lexeme					~ string			pause => before		event => string
-string					~ escaped_char
+:lexeme					~ text				pause => before		event => text
+text					~ escaped_char
 							| non_quote_char
 END_OF_GRAMMAR
 
@@ -389,7 +389,7 @@ sub _process
 
 		print sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') if ($self -> options & debug);
 
-		if ($event_name ne 'string')
+		if ($event_name ne 'text')
 		{
 			$self -> _save_text($text);
 
@@ -464,7 +464,7 @@ sub _process
 			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 		}
-		elsif ($event_name eq 'string')
+		elsif ($event_name eq 'text')
 		{
 			$text .= $lexeme;
 		}
@@ -521,7 +521,7 @@ sub _save_text
 {
 	my($self, $text) = @_;
 
-	$self -> _add_daughter('string', {text => $text}) if (length($text) );
+	$self -> _add_daughter('text', {text => $text}) if (length($text) );
 
 	return '';
 
@@ -600,7 +600,8 @@ sub validate_open_close
 	my($open)  = $self -> open;
 	my($close) = $self -> close;
 
-	die "Error: # of open delims must match # of close delims\n" if ($#$open != $#$close);
+	die "Error: There must be at least 1 pair of open/close delimiters\n"    if ( ($#$open < 0) || ($#$close < 0) );
+	die "Error: The # of open delimiters must match # of close delimiters\n" if ($#$open != $#$close);
 
 	my(%substitute)         = (close => '', delim => '', open => '');
 	my($matching_delimiter) = {};
@@ -799,11 +800,41 @@ See the L</FAQ> for various topics, including:
 
 =item o UFT8 handling
 
+See t/utf8.t.
+
 =item o Escaping delimiters within the text
+
+See t/escapes.t.
 
 =item o Options to make nested and/or overlapped delimiters fatal errors
 
-=item o Using delimiters which occur as part of another delimiter
+See t/colons.t.
+
+=item o Using delimiters which are part of another delimiter
+
+See t/escapes.t and t/perl.delimiters.
+
+=item o Processing the tree-structured output
+
+See scripts/walk.down.pl.
+
+=item o Emulating L<Text::Xslate>'s use of '<:' and ':>
+
+See t/colons.t and t/percents.t.
+
+=item o Implementing a really trivial HTML parser
+
+See scripts/walk.down.pl and t/html.t.
+
+In the same vein, see t/angle.brackets.t, for code where the delimiters are just '<' and '>'.
+
+=item o Handling multiple sets of delimiters
+
+See t/multiple.delimiters.t.
+
+=item o Implementing hard-to-read text strings as delimiters
+
+See t/silly.delimiters.
 
 =back
 
@@ -857,7 +888,7 @@ An arrayref of strings, each one a closing delimiter.
 
 The # of elements must match the # of elements in the 'open' arrayref.
 
-See the L</FAQ> for details.
+See the L</FAQ> for details and warnings.
 
 A value for this option is mandatory.
 
@@ -877,7 +908,7 @@ An arrayref of strings, each one an opening delimiter.
 
 The # of elements must match the # of elements in the 'open' arrayref.
 
-See the L</FAQ> for details.
+See the L</FAQ> for details and warnings.
 
 A value for this option is mandatory.
 
@@ -907,6 +938,8 @@ Returns a string containing the grammar constructed based on user input.
 
 Get the arrayref of closing delimiters.
 
+See also L</open()>.
+
 See the L</FAQ> for details and warnings.
 
 'close' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
@@ -926,7 +959,7 @@ The value is incremented for each opening delimiter and decremented for each clo
 
 Returns the last error or warning message set when the code died.
 
-Error messages always start with 'Error:\s'. Messages never end with "\n".
+Error messages always start with 'Error: '. Messages never end with "\n".
 
 Parsing error strings is not a good idea, ever though this module's format for them is fixed.
 
@@ -1016,6 +1049,8 @@ Get or set the number of characters called 'the next few chars', which are print
 
 Get the arrayref of opening delimiters.
 
+See also L</close()>.
+
 See the L</FAQ> for details and warnings.
 
 'open' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
@@ -1026,26 +1061,23 @@ Here, the [] indicate an optional parameter.
 
 Get or set the option flags.
 
-'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+For typical usage, see scripts/synopsis.pl.
 
 See L</FAQ> for details.
 
+'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
 =head2 parse()
 
-This is the only method the caller needs to call. All parameters are supplied to L</new()>
-(or via other methods before C<parse()> is called).
+This is the only method the user needs to call. All data can be supplied when calling L</new()>.
+
+If you wish, you can call other methods (see L</text([$string])> ) before C<parse()> is called).
 
 See scripts/samples.pl.
 
 Returns 0 for success and 1 for failure.
 
-If the value is 1, you need to call L</error_number()> to find out what happened.
-
-=head2 tree()
-
-Returns an object of type L<Tree::DAG_Node>, which holds the parsed data.
-
-Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
+If the value is 1, you should call L</error_number()> to find out what happened.
 
 =head2 text([$string])
 
@@ -1054,6 +1086,14 @@ Here, the [] indicate an optional parameter.
 Get or set the string to be parsed.
 
 'text' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
+=head2 tree()
+
+Returns an object of type L<Tree::DAG_Node>, which holds the parsed data.
+
+Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
+
+See scripts/walk.down.pl for sample code which processes this tree's nodes.
 
 =head1 FAQ
 
@@ -1097,7 +1137,7 @@ Each of these parameters takes an arrayref as a value.
 The # of elements in the 2 arrayrefs must be the same.
 
 The 1st element in the 'open' arrayref is the 1st user-chosen opening delimiter, and the 1st
-element in the 'close' arrayref will be the corresponding closing delimiter.
+element in the 'close' arrayref must be the corresponding closing delimiter.
 
 It is possible to use a delimiter which is part of another delimiter.
 
@@ -1141,7 +1181,7 @@ This printout includes:
 
 =item o The parse result (0 => success, 1 => failure)
 
-=item o The ambiguity satus and terminals expected, if the parse is ambiguous
+=item o The ambiguity status and terminals expected, if the parse is ambiguous
 
 Ambiguity is not, in and of itself, an error. But see the C<ambiguity_is_fatal> option, below.
 
@@ -1189,11 +1229,9 @@ See scripts/walk.down.pl. It is a copy of t/html.t with tree-walking code instea
 The parsed output is held in a tree managed by L<Tree::DAG_Node>.
 
 The tree always has a root node, which has nothing to do with the input data. So, even an empty
-imput string will produce a tree with 1 node.
+imput string will produce a tree with 1 node. This root has an empty hashref associated with it.
 
 Nodes have a name and a hashref of attributes.
-
-Note: The root of the tree has an empty hashref associated with it.
 
 The name indicates the type of node. Names are one of these literals:
 
@@ -1205,7 +1243,7 @@ The name indicates the type of node. Names are one of these literals:
 
 =item o root
 
-=item o string
+=item o text
 
 =back
 
@@ -1217,9 +1255,11 @@ The (key => value) pairs in the hashref are:
 
 =item o text => $string
 
-If the node name is 'open' and 'close', $string is the delimiter.
+If the node name is 'open' or 'close', $string is the delimiter.
 
-If the node name is 'string', $string is the text from the document.
+If the node name is 'text', $string is the verbatim text from the document.
+
+Verbatim means, for example, that backslashes in the input are preserved.
 
 =back
 
@@ -1235,7 +1275,7 @@ Post-processing (valid) HTML could easily generate another view of the data.
 
 And anyway, to get perfect HTML you'd be grabbing the output of L<Marpa::R2::HTML>, right?
 
-See t/html.t for a trivial HTML parser.
+See scripts/walk.down.pl and t/html.t for a trivial HTML parser.
 
 =head2 What is the homepage of Marpa?
 
@@ -1281,6 +1321,9 @@ And thanks to rns (Ruslan Shvedov) for writing the grammar for double-quoted str
 L<MarpaX::Demo::SampleScripts>'s scripts/quoted.strings.02.pl. I adapted it to HTML (see
 scripts/quoted.strings.05.pl in that module), and then incorporated the grammar into
 L<GraphViz2::Marpa>, and into this module.
+
+Lastly, thanks to Robert Rothenberg for L<Const::Exporter>, a module which works the same way
+Perl does.
 
 =head1 Repository
 
