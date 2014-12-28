@@ -36,9 +36,10 @@ my(%params) =
 		'strict'          => 0,
 		'Test::More'      => 1.001006,
 #		'Test::Pod'       => 1.45, # Make it optional. See xt/author/pod.t
-		'Tree::DAG_Node'  => 1.23,
+		'Tree'            => 1.05,
 		'Try::Tiny'       => 0.09,
 		'Types::Standard' => 1.000004,
+		'utf8'            => 0,
 		'warnings'        => 0,
 	},
 	VERSION_FROM => 'lib/Text/Balanced/Marpa.pm',
