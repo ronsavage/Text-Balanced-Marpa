@@ -42,7 +42,7 @@
    "provides" : {
       "Text::Balanced::Marpa" : {
          "file" : "lib/Text/Balanced/Marpa.pm",
-         "version" : "1.00"
+         "version" : "1.01"
       }
    },
    "release_status" : "stable",
@@ -54,5 +54,5 @@
          "url" : "https://github.com/ronsavage/Text-Balanced-Marpa"
       }
    },
-   "version" : "1.00"
+   "version" : "1.01"
 }
