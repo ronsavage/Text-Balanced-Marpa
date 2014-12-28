@@ -1,5 +1,7 @@
 #!/bin/bash
 
-DEST=$DR/Perl-modules/html/Text/Balanced
+FILE=Perl-modules/html/Text/Balanced/Marpa.html
 
-pod2html.pl -i lib/Text/Balanced/Marpa.pm -o $DEST/Marpa.html
+pod2html.pl -i lib/Text/Balanced/Marpa.pm -o $DR/$FILE
+
+cp $DR/$FILE ~/savage.net.au/$FILE
