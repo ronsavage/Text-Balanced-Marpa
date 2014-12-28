@@ -305,15 +305,10 @@ sub node2string
 	@$vert_dashes      =
 	(
 		@indent,
-		($sibling_count == 1 ? $offset : '   |'),
+		($sibling_count == 0 ? $offset : '   |'),
 	);
 
-	if ($sibling_count == ($t -> get_index_for($t) + 1) )
-	{
-		$$vert_dashes[$depth] = $offset;
-	}
-
-	return join('' => @indent[1 .. $#indent]) . ($depth ? '   |--- ' : '') . $self -> format_node($options, $t);
+	return join('', @indent[1 .. $#indent]) . ($depth ? '   |--- ' : '') . $self -> format_node($options, $t);
 
 } # End of node2string.
 
@@ -886,7 +881,7 @@ See t/escapes.t and t/perl.delimiters.
 
 =item o Processing the tree-structured output
 
-See scripts/walk.down.pl.
+See scripts/traverse.pl.
 
 =item o Emulating L<Text::Xslate>'s use of '<:' and ':>
 
@@ -894,7 +889,7 @@ See t/colons.t and t/percents.t.
 
 =item o Implementing a really trivial HTML parser
 
-See scripts/walk.down.pl and t/html.t.
+See scripts/traverse.pl and t/html.t.
 
 In the same vein, see t/angle.brackets.t, for code where the delimiters are just '<' and '>'.
 
@@ -1088,6 +1083,38 @@ This message can never be just a warning message.
 
 See L</error_message()>.
 
+=head2 format_node($options, [$node])
+
+Here, [] represent an optional parameter.
+
+Returns a string consisting of the node's name and, optionally, it's attributes.
+
+Possible keys in the $options hashref:
+
+=over 4
+
+=item o no_attributes => $Boolean
+
+If 1, the node's attributes are not included in the string returned.
+
+Default: 0 (include attributes).
+
+=back
+
+Calls L</hashref2string($hashref)>.
+
+Called by L</node2string($options, [$node])>.
+
+You would not normally call this method.
+
+If you don't wish to supply options, use format_node({}, $node).
+
+=head2 hashref2string($hashref)
+
+Returns the given hashref as a string.
+
+Called by L</format_node($options, [$node])>.
+
 =head2 known_events()
 
 Returns a hashref where the keys are event names and the values are 1.
@@ -1114,6 +1141,26 @@ Here, the [] indicate an optional parameter.
 Get or set the number of characters called 'the next few chars', which are printed during debugging.
 
 'next_few_limit' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
+
+=head2 node2string($options, $t, $vert_dashes)
+
+Returns a string of the node's name and attributes, with a leading indent, suitable for printing.
+
+Possible keys in the $options hashref:
+
+=over 4
+
+=item o no_attributes => $Boolean
+
+If 1, the node's attributes are not included in the string returned.
+
+Default: 0 (include attributes).
+
+=back
+
+Calls L</format_node($options, [$node])>.
+
+Called by L</tree2string($options, [$some_tree])>.
 
 =head2 open()
 
@@ -1163,7 +1210,95 @@ Returns an object of type L<Tree>, which holds the parsed data.
 
 Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
 
-See scripts/walk.down.pl for sample code which processes this tree's nodes.
+See scripts/traverse.pl for sample code which processes this tree's nodes.
+
+=head2 tree2string($options, [$some_tree])
+
+Here, the [] represent an optional parameter.
+
+Returns an arrayref of lines, suitable for printing.
+
+Draws a nice ASCII-art representation of the tree structure.
+
+The tree looks like:
+
+	Root. Attributes: {# => "0"}
+	   |--- I. Attributes: {# => "1"}
+	   |   |--- J. Attributes: {# => "3"}
+	   |   |   |--- K. Attributes: {# => "3"}
+	   |   |--- J. Attributes: {# => "4"}
+	   |       |--- L. Attributes: {# => "5"}
+	   |           |--- M. Attributes: {# => "5"}
+	   |               |--- N. Attributes: {# => "5"}
+	   |                   |--- O. Attributes: {# => "5"}
+	   |--- H. Attributes: {# => "2"}
+	   |   |--- J. Attributes: {# => "3"}
+	   |   |   |--- K. Attributes: {# => "3"}
+	   |   |--- J. Attributes: {# => "4"}
+	   |       |--- L. Attributes: {# => "5"}
+	   |           |--- M. Attributes: {# => "5"}
+	   |               |--- N. Attributes: {# => "5"}
+	   |                   |--- O. Attributes: {# => "5"}
+	   |--- D. Attributes: {# => "6"}
+	   |   |--- F. Attributes: {# => "8"}
+	   |       |--- G. Attributes: {# => "8"}
+	   |--- E. Attributes: {# => "7"}
+	   |   |--- F. Attributes: {# => "8"}
+	   |       |--- G. Attributes: {# => "8"}
+	   |--- B. Attributes: {# => "9"}
+	   |   |--- C. Attributes: {# => "9"}
+
+Or, without attributes:
+
+	Root
+	   |--- I
+	   |   |--- J
+	   |   |   |--- K
+	   |   |--- J
+	   |       |--- L
+	   |           |--- M
+	   |               |--- N
+	   |                   |--- O
+	   |--- H
+	   |   |--- J
+	   |   |   |--- K
+	   |   |--- J
+	   |       |--- L
+	   |           |--- M
+	   |               |--- N
+	   |                   |--- O
+	   |--- D
+	   |   |--- F
+	   |       |--- G
+	   |--- E
+	   |   |--- F
+	   |       |--- G
+	   |--- B
+	   |   |--- C
+
+See scripts/traverse.pl.
+
+Example usage:
+
+  print map("$_\n", @{$tree->tree2string});
+
+Can be called with $some_tree set to any $node, and will print the tree assuming $node is the root.
+
+If you don't wish to supply options, use tree2string({}, $node).
+
+Possible keys in the $options hashref (which defaults to {}):
+
+=over 4
+
+=item o no_attributes => $Boolean
+
+If 1, the node's attributes are not included in the string returned.
+
+Default: 0 (include attributes).
+
+=back
+
+Calls L</node2string($options, $t, $vert_dashes)>.
 
 =head1 FAQ
 
@@ -1292,7 +1427,7 @@ It's value is 16.
 
 =head2 How do I make use of the tree built by the parser?
 
-See scripts/walk.down.pl. It is a copy of t/html.t with tree-walking code instead of test code.
+See scripts/traverse.pl. It is a copy of t/html.t with tree-walking code instead of test code.
 
 =head2 How is the parsed data held in RAM?
 
@@ -1345,7 +1480,7 @@ Post-processing (valid) HTML could easily generate another view of the data.
 
 But anyway, to get perfect HTML you'd be grabbing the output of L<Marpa::R2::HTML>, right?
 
-See scripts/walk.down.pl and t/html.t for a trivial HTML parser.
+See scripts/traverse.pl and t/html.t for a trivial HTML parser.
 
 =head2 What is the homepage of Marpa?
 

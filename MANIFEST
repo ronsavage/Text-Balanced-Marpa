@@ -12,7 +12,7 @@ README
 scripts/pod2html.sh
 scripts/samples.pl
 scripts/synopsis.pl
-scripts/walk.down.pl
+scripts/traverse.pl
 t/angle.brackets.t
 t/braces.t
 t/brackets.t

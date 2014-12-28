@@ -57,26 +57,16 @@ if ($parser -> parse == 0)
 	my($indent);
 	my($text);
 
-	# Note: walk_down takes a hashref!
+	for my $node ($parser -> tree -> traverse)
+	{
+		next if ($node -> is_root);
 
-	$parser -> tree -> walk_down
-	({
-		callback => sub
-		{
-			my($node, $opts) = @_;
+		$attributes = $node -> meta;
+		$text       = $$attributes{text};
+		$text       =~ s/^\s+//;
+		$text       =~ s/\s+$//;
+		$indent     = $node -> depth - 1;
 
-			return 1 if ($node -> is_root); # Keep walking.
-
-			$attributes = $node -> attributes;
-			$text       = $$attributes{text};
-			$text       =~ s/^\s+//;
-			$text       =~ s/\s+$//;
-			$indent     = scalar($node -> ancestors) - 1;
-
-			print "\t" x $indent, "$text\n" if (length($text) );
-
-			return 1; # Keep walking.
-		},
-		_depth => 0,
-	});
+		print "\t" x $indent, "$text\n" if (length($text) );
+	}
 }
