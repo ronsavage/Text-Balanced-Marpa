@@ -425,7 +425,7 @@ sub _process
 		$original_lexeme           = $lexeme;
 		$pos                       = $self -> recce -> lexeme_read($event_name);
 
-		die "Error: lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
+		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
 		print sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') if ($self -> options & debug);
 
@@ -456,7 +456,7 @@ sub _process
 				$self -> error_message($message);
 				$self -> error_number(1);
 
-				die "Error: $message\n" if ($self -> options & overlap_is_fatal);
+				die "$message\n" if ($self -> options & overlap_is_fatal);
 
 				# If we did not die, then it's a warning message.
 
@@ -482,7 +482,7 @@ sub _process
 				$self -> error_message($message);
 				$self -> error_number(2);
 
-				die "Error: $message\n" if ($self -> options & nesting_is_fatal);
+				die "$message\n" if ($self -> options & nesting_is_fatal);
 
 				# If we did not die, then it's a warning message.
 
@@ -527,7 +527,7 @@ sub _process
 
 		if ($self -> options & ambiguity_is_fatal)
 		{
-			die "Error: $message\n";
+			die "$message\n";
 		}
 		elsif ($self -> options & print_warnings)
 		{
@@ -612,7 +612,7 @@ sub _validate_event
 
 	for (@event_name)
 	{
-		die "Error: Unexpected event name '$_'" if (! ${$self -> known_events}{$_});
+		die "Unexpected event name '$_'" if (! ${$self -> known_events}{$_});
 	}
 
 	if ($event_count > 1)
@@ -646,7 +646,7 @@ sub _validate_event
 		}
 		else
 		{
-			die "Error: The code only handles 1 event at a time, or a few special cases. \n";
+			die "The code only handles 1 event at a time, or a few special cases. \n";
 		}
 	}
 
@@ -662,8 +662,8 @@ sub validate_open_close
 	my($open)  = $self -> open;
 	my($close) = $self -> close;
 
-	die "Error: There must be at least 1 pair of open/close delimiters\n"    if ( ($#$open < 0) || ($#$close < 0) );
-	die "Error: The # of open delimiters must match # of close delimiters\n" if ($#$open != $#$close);
+	die "There must be at least 1 pair of open/close delimiters\n"    if ( ($#$open < 0) || ($#$close < 0) );
+	die "The # of open delimiters must match # of close delimiters\n" if ($#$open != $#$close);
 
 	my(%substitute)         = (close => '', delim => '', open => '');
 	my($matching_delimiter) = {};
@@ -684,7 +684,7 @@ sub validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(4);
 
-			die "Error: $message\n";
+			die "$message\n";
 		}
 
 		if ( ( (length($$open[$i]) > 1) && ($$open[$i] =~ /'/) ) || ( (length($$close[$i]) > 1) && ($$close[$i] =~ /'/) ) )
@@ -694,7 +694,7 @@ sub validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(5);
 
-			die "Error: $message\n";
+			die "$message\n";
 		}
 
 		$seen{open}{$$open[$i]}   = 0 if (! $seen{open}{$$open[$i]});
@@ -841,7 +841,7 @@ This is the printout of synopsis.pl:
 	Parse result: 0 (0 is success)
 	--------------------------------------------------
 	Parsing |a <: b <: c :> d :> e|
-	Error: Parse failed. Error: Opened delimiter <: again before closing previous one
+	Error: Parse failed. Opened delimiter <: again before closing previous one
 	Text parsed so far:
 	root. Attributes: {}
 	   |--- string. Attributes: {text => "a "}
@@ -1222,9 +1222,9 @@ See scripts/traverse.pl for sample code which processes this tree's nodes.
 
 Here, the [] represent an optional parameter.
 
-If $some_tree is not supplied, uses the calling object as the tree.
+If $some_tree is not supplied, uses the calling object's tree ($self -> tree).
 
-Returns an arrayref of lines, suitable for printing.
+Returns an arrayref of lines, suitable for printing. These lines do not end in "\n".
 
 Draws a nice ASCII-art representation of the tree structure.
 

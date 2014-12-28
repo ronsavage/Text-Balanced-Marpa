@@ -1,6 +1,7 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
 1.01  Mon Dec 29 08:41:00 2014
+	- Stop including the string 'Error: ' twice in error messages.
 	- Stop the option print_warnings from printing the tree. Leave that to the caller.
 	- Change docs to match.
 	- Change scripts/*.pl and t/*.t to match.
