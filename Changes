@@ -1,4 +1,13 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
+1.01  Mon Dec 29 08:41:00 2014
+	- Stop the option print_warnings from printing the tree. Leave that to the caller.
+	- Change docs to match.
+	- Change scripts/*.pl and t/*.t to match.
+	- Change the output of tree2string() where there was an extra vertical dash at the start of the
+		last line in some cases (which the original code in Tree::DAG_Node did not print).
+	- Clean up the docs.
+	- Rename t/parenthises.t to t/parentheses.t.
+
 1.00  Wed Dec 24 09:52:00 2014
 	  - Original version

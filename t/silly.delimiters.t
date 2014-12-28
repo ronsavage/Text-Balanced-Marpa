@@ -28,7 +28,7 @@ for my $text (@text)
 
 	ok($parser -> parse(\$text) == 0, "Parsed $text");
 
-	diag join("\n", @{$parser -> tree2string});
+	#diag join("\n", @{$parser -> tree2string});
 }
 
 done_testing($count);

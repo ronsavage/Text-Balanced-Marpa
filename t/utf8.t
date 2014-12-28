@@ -27,15 +27,11 @@ my(@text) =
 	q|Δabc ΔΠηληϊά\δεω Ἀχιλῆοςδ δ Δʎ ʏ ʐ ʑ ʒ ʓ ʙ ʚδ|,
 );
 
-my($result);
-
 for my $text (@text)
 {
 	$count++;
 
-	$result = $parser -> parse(\$text);
-
-	ok($result == 0, "Parsed $text");
+	ok($parser -> parse(\$text) == 0, "Parsed $text");
 
 	#diag join("\n", @{$parser -> tree2string});
 }

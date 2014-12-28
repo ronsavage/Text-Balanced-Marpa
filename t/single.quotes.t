@@ -24,15 +24,11 @@ my(@text) =
 	q|a 'b "c" d' e|,
 );
 
-my($result);
-
 for my $text (@text)
 {
 	$count++;
 
-	$result = $parser -> parse(\$text);
-
-	ok($result == 0, "Parsed $text");
+	ok($parser -> parse(\$text) == 0, "Parsed $text");
 
 	#diag join("\n", @{$parser -> tree2string});
 }

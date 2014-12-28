@@ -43,6 +43,8 @@ my(@text) =
 	q|<i><b>Bold Italic</i></b>|,
 );
 
+my($result);
+
 for my $text (@text)
 {
 	$count++;
@@ -53,8 +55,10 @@ for my $text (@text)
 		print "Start test  $count. Input |$text|\n";
 	}
 
-	$parser -> text(\$text);
-	$parser -> parse;
+	$result = $parser -> parse(\$text);
+
+	print join("\n", @{$parser -> tree2string}), "\n";
+	print "Parse result: $result (0 is success)\n";
 
 	if ($maxlevel ne 'notice')
 	{
