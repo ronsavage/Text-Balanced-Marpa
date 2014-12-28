@@ -20,7 +20,7 @@ use Marpa::R2;
 
 use Moo;
 
-use Tree::DAG_Node;
+use Tree;
 
 use Types::Standard qw/Any ArrayRef HashRef Int Str/;
 
@@ -172,7 +172,7 @@ sub BUILD
 
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
 	#
-	# Note:   Tokens of the form '_xxx_' are placed just below, with values returned
+	# Note:   Tokens of the form '_xxx_' are replaced just below, with values returned
 	#			by the call to validate_open_close().
 
 	my($bnf) = <<'END_OF_GRAMMAR';
@@ -247,12 +247,37 @@ sub _add_daughter
 {
 	my($self, $name, $attributes)  = @_;
 	$attributes ||= {};
-	my($node)   = Tree::DAG_Node -> new({name => $name, attributes => $attributes});
 	my($stack)  = $self -> node_stack;
+	my($node)   = Tree -> new($name);
 
-	$$stack[$#$stack] -> add_daughter($node);
+	$node -> meta($attributes);
+
+	$$stack[$#$stack] -> add_child({}, $node);
 
 } # End of _add_daughter.
+
+# -----------------------------------------------
+
+sub format_node
+{
+	my($self, $options, $node) = @_;
+	my($s) = $node -> value;
+	$s     .= '. Attributes: ' . $self -> hashref2string($node -> meta) if (! $$options{no_attributes});
+
+	return $s;
+
+} # End of format_node.
+
+# -----------------------------------------------
+
+sub hashref2string
+{
+	my($self, $hashref) = @_;
+	$hashref ||= {};
+
+	return '{' . join(', ', map{qq|$_ => "$$hashref{$_}"|} sort keys %$hashref) . '}';
+
+} # End of hashref2string.
 
 # ------------------------------------------------
 
@@ -267,6 +292,30 @@ sub next_few_chars
 	return $s;
 
 } # End of next_few_chars.
+
+# -----------------------------------------------
+
+sub node2string
+{
+	my($self, $options, $t, $vert_dashes) = @_;
+	my($depth)         = $t -> depth;
+	my($sibling_count) = defined $t -> is_root ? 1 : scalar $t -> parent -> children;
+	my($offset)        = ' ' x 4;
+	my(@indent)        = map{$$vert_dashes[$_] || $offset} 0 .. $depth - 1;
+	@$vert_dashes      =
+	(
+		@indent,
+		($sibling_count == 1 ? $offset : '   |'),
+	);
+
+	if ($sibling_count == ($t -> get_index_for($t) + 1) )
+	{
+		$$vert_dashes[$depth] = $offset;
+	}
+
+	return join('' => @indent[1 .. $#indent]) . ($depth ? '   |--- ' : '') . $self -> format_node($options, $t);
+
+} # End of node2string.
 
 # ------------------------------------------------
 
@@ -287,8 +336,8 @@ sub parse
 	# Since $self -> node_stack has not been initialized yet,
 	# we can't call _add_daughter() until after this statement.
 
-	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {} }));
-	$self -> node_stack([$self -> tree -> root]);
+	$self -> tree(Tree -> new('root') );
+	$self -> node_stack([$self -> tree]);
 
 	# Return 0 for success and 1 for failure.
 
@@ -316,7 +365,7 @@ sub parse
 
 	if ($self -> options & print_warnings)
 	{
-		print join("\n", @{$self -> tree -> tree2string}), "\n";
+		print join("\n", @{$self -> tree2string}), "\n";
 		print "Parse result: $result (0 is success)\n";
 	}
 
@@ -509,7 +558,7 @@ sub _push_node_stack
 {
 	my($self)      = @_;
 	my($stack)     = $self -> node_stack;
-	my(@daughters) = $$stack[$#$stack] -> daughters;
+	my(@daughters) = $$stack[$#$stack] -> children;
 
 	push @$stack, $daughters[$#daughters];
 
@@ -526,6 +575,27 @@ sub _save_text
 	return '';
 
 } # End of _save_text.
+
+# -----------------------------------------------
+
+sub tree2string
+{
+	my($self, $options, $tree) = @_;
+	$options                   ||= {};
+	$$options{no_attributes}   ||= 0;
+	$tree                      ||= $self -> tree;
+
+	my(@out);
+	my(@vert_dashes);
+
+	for my $node ($tree -> traverse)
+	{
+		push @out, $self -> node2string($options, $node, \@vert_dashes);
+	}
+
+	return [@out];
+
+} # End of tree2string.
 
 # ------------------------------------------------
 
@@ -1089,7 +1159,7 @@ Get or set the string to be parsed.
 
 =head2 tree()
 
-Returns an object of type L<Tree::DAG_Node>, which holds the parsed data.
+Returns an object of type L<Tree>, which holds the parsed data.
 
 Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
 
@@ -1226,7 +1296,7 @@ See scripts/walk.down.pl. It is a copy of t/html.t with tree-walking code instea
 
 =head2 How is the parsed data held in RAM?
 
-The parsed output is held in a tree managed by L<Tree::DAG_Node>.
+The parsed output is held in a tree managed by L<Tree>.
 
 The tree always has a root node, which has nothing to do with the input data. So, even an empty
 imput string will produce a tree with 1 node. This root has an empty hashref associated with it.
@@ -1305,7 +1375,7 @@ Perhaps this could be a sub-class?
 
 L<Text::Balanced>.
 
-L<Tree::DAG_Node> and L<Tree::DAG_Node::Persist>.
+L<Tree> and L<Tree::Persist>.
 
 =head1 Machine-Readable Change Log
 
