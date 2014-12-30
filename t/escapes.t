@@ -46,4 +46,6 @@ for my $text (@text)
 	#diag join("\n", @{$parser -> tree2string});
 }
 
+print "# Internal test count: $count\n";
+
 done_testing($count);

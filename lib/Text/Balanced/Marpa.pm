@@ -1103,7 +1103,7 @@ Called by L</node2string($options, $is_last_node, $node, $vert_dashes)>.
 
 You would not normally call this method.
 
-If you don't wish to supply options, set option to {}.
+If you don't wish to supply options, use format_node({}, $node).
 
 =head2 hashref2string($hashref)
 
@@ -1519,6 +1519,8 @@ Perhaps this could be a sub-class?
 L<Text::Balanced>.
 
 L<Tree> and L<Tree::Persist>.
+
+L<MarpaX::Demo::SampleScripts> - for various usages of L<Marpa::R2>, but not of this module.
 
 =head1 Machine-Readable Change Log
 
