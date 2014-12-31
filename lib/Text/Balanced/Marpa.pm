@@ -399,6 +399,11 @@ sub parse
 	{
 		$result = 1;
 
+		# This may need to be copied up to the other place where $result == 1.
+		# I really need someway of testing exhaustion.
+		#
+		# We don't use 'die' here. 'die' is used to exit from the _process()'s code.
+
 		if ($self -> recce && $self -> recce -> exhausted)
 		{
 			$message = 'Parse exhausted';
@@ -406,13 +411,16 @@ sub parse
 			$self -> error_message($message);
 			$self -> error_number(6);
 
-			die "Error: $message\n" if ($self -> options & exhaustion_is_fatal);
+			if ($self -> options & exhaustion_is_fatal)
+			{
+				print "Error: $message\n";
+			}
+			else
+			{
+				$self -> error_number(-6);
 
-			# If we did not die, then it's a warning message.
-
-			$self -> error_number(-6);
-
-			print "Warning: $message\n" if ($self -> options & print_warnings);
+				print "Warning: $message\n" if ($self -> options & print_warnings);
+			}
 		}
 		else
 		{
