@@ -83,6 +83,14 @@ has error_number =>
 	required => 0,
 );
 
+has escape_char =>
+(
+	default  => sub{return '\\'},
+	is       => 'rw',
+	isa      => Str,
+	required => 0,
+);
+
 has grammar =>
 (
 	default  => sub {return ''},
@@ -179,7 +187,7 @@ has text =>
 	required => 0,
 );
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # ------------------------------------------------
 
@@ -216,7 +224,7 @@ delimiter_char			~ [_delimiter_]
 :lexeme					~ close_delim		pause => before		event => close_delim
 _close_
 
-escaped_char			~ '\' delimiter_char	# Use ' in comment for UltraEdit.
+escaped_char			~ '_escape_char_' delimiter_char	# Use ' in comment for UltraEdit.
 
 # Warning: Do not add '+' to this set, even though it speeds up things.
 # The problem is that the set then gobbles up any '\', so the following
@@ -233,10 +241,23 @@ text					~ escaped_char
 							| non_quote_char
 END_OF_GRAMMAR
 
-	my($hashref) = $self -> validate_open_close;
-	$bnf         =~ s/_open_/$$hashref{open}/;
-	$bnf         =~ s/_close_/$$hashref{close}/;
-	$bnf         =~ s/_delimiter_/$$hashref{delim}/g;
+	my($hashref)     = $self -> validate_open_close;
+	$bnf             =~ s/_open_/$$hashref{open}/;
+	$bnf             =~ s/_close_/$$hashref{close}/;
+	$bnf             =~ s/_delimiter_/$$hashref{delim}/g;
+	my($escape_char) = $self -> escape_char;
+
+	if ($escape_char eq "'")
+	{
+		$self -> error_message('Single-quote is forbidden as an escape character');
+		$self -> error_number(7);
+
+		# This line does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+
+		die "Error: $message\n";
+	}
+
+	$bnf =~ s/_escape_char_/$escape_char/g;
 
 	$self -> bnf($bnf);
 	$self -> grammar
@@ -700,8 +721,31 @@ sub validate_open_close
 	my($open)  = $self -> open;
 	my($close) = $self -> close;
 
-	die "There must be at least 1 pair of open/close delimiters\n"    if ( ($#$open < 0) || ($#$close < 0) );
-	die "The # of open delimiters must match # of close delimiters\n" if ($#$open != $#$close);
+	my($message);
+
+	if ( ($#$open < 0) || ($#$close < 0) )
+	{
+		$message = 'There must be at least 1 pair of open/close delimiters';
+
+		$self -> error_message($message);
+		$self -> error_number(8);
+
+		# This die does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+
+		die "Error: $message\n";
+	}
+
+	if ($#$open != $#$close)
+	{
+		$message = 'The # of open delimiters must match the # of close delimiters';
+
+		$self -> error_message($message);
+		$self -> error_number(9);
+
+		# This die does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+
+		die "Error: $message\n";
+	}
 
 	my(%substitute)         = (close => '', delim => '', open => '');
 	my($matching_delimiter) = {};
@@ -1147,9 +1191,30 @@ If L</error_number()> returns 6, it's an error, and if it returns -6 it's a warn
 
 You can set the option C<exhaustion_is_fatal> to make it fatal.
 
+=item o 7 => 'Single-quote is forbidden as an escape character'
+
+This limitation is due to the syntax of
+L<Marpa's DSL|https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/DSL.pod>.
+
+This message can never be just a warning message.
+
+=item o 8 => "There must be at least 1 pair of open/close delimiters"
+
+This message can never be just a warning message.
+
+=item o 9 => "The # of open delimiters must match the # of close delimiters"
+
+This message can never be just a warning message.
+
 =back
 
 See L</error_message()>.
+
+=head2 escape_char([$char])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the escape char.
 
 =head2 format_node($options, $node)
 

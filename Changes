@@ -8,6 +8,8 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- When the parse is successful, error_message() now returns 'OK'. It used to return ''.
 	- Add t/skip.prefix.t to demonstrate pos() and length().
 	- Add scripts/tiny.pl for quick tests without Test::More.
+	- Add the escape_char() mutator, to allow the user to overrider the default backslash escape char.
+	- Add t/non.default.escapes.t to demonstrate escape_char().
 
 1.01  Mon Dec 29 08:41:00 2014
 	- Stop including the string 'Error: ' twice in error messages.
