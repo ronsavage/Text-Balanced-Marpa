@@ -8,12 +8,13 @@ use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 
 use Const::Exporter constants =>
 [
-	nothing_is_fatal   =>  0, # The default.
-	debug              =>  1,
-	print_warnings     =>  2,
-	overlap_is_fatal   =>  4,
-	nesting_is_fatal   =>  8,
-	ambiguity_is_fatal => 16,
+	nothing_is_fatal    =>  0, # The default.
+	debug               =>  1,
+	print_warnings      =>  2,
+	overlap_is_fatal    =>  4,
+	nesting_is_fatal    =>  8,
+	ambiguity_is_fatal  => 16,
+	exhaustion_is_fatal => 32,
 ];
 
 use Marpa::R2;
@@ -98,11 +99,27 @@ has known_events =>
 	required => 0,
 );
 
+has length =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
+	required => 0,
+);
+
 has matching_delimiter =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
 	isa      => HashRef,
+	required => 0,
+);
+
+has next_few_limit =>
+(
+	default  => sub{return 20},
+	is       => 'rw',
+	isa      => Int,
 	required => 0,
 );
 
@@ -130,9 +147,9 @@ has options =>
 	required => 0,
 );
 
-has next_few_limit =>
+has pos =>
 (
-	default  => sub{return 20},
+	default  => sub{return 0},
 	is       => 'rw',
 	isa      => Int,
 	required => 0,
@@ -341,6 +358,8 @@ sub parse
 
 	my($result) = 0;
 
+	my($message);
+
 	try
 	{
 		if (defined (my $value = $self -> _process) )
@@ -357,7 +376,25 @@ sub parse
 	{
 		$result = 1;
 
-		print "Error: Parse failed. ${_}";
+		if ($self -> recce -> exhausted)
+		{
+				$message = 'Parse exhausted';
+
+				$self -> error_message($message);
+				$self -> error_number(6);
+
+				die "Error: $message\n" if ($self -> options & exhaustion_is_fatal);
+
+				# If we did not die, then it's a warning message.
+
+				$self -> error_number(-6);
+
+				print "Warning: $message\n" if ($self -> options & print_warnings);
+		}
+		else
+		{
+			print "Error: Parse failed. ${_}";
+		}
 	};
 
 	# Return 0 for success and 1 for failure.
@@ -384,12 +421,12 @@ sub _pop_node_stack
 sub _process
 {
 	my($self)               = @_;
-	my($stringref)          = $self -> text || ''; # Allow for undef.
-	my($length)             = length $$stringref;
+	my($stringref)          = $self -> text || \''; # Allow for undef. Use ' in comment for UltraEdit.
+	my($pos)                = $self -> pos;
+	my($length)             = $self -> length || length $$stringref;
 	my($text)               = '';
 	my($format)             = "%-20s    %5s    %5s    %5s    %-20s    %-20s\n";
 	my($last_event)         = '';
-	my($pos)                = 0;
 	my($matching_delimiter) = $self -> matching_delimiter;
 
 	if ($self -> options & debug)
@@ -957,6 +994,16 @@ A value for this option is mandatory.
 
 Default: None.
 
+=item o length => $integer
+
+The maxiumum length of the input string to process.
+
+This parameter works in conjunction with the C<pos> parameter.
+
+See the L</FAQ> for details.
+
+Default: Calls Perl's length() function on the input string.
+
 =item o next_few_limit => $integer
 
 This controls how many characters are printed when displaying 'the next few chars'.
@@ -983,7 +1030,17 @@ This allows you to turn on various options.
 
 Default: 0 (nothing is fatal).
 
-See L</FAQ> for details.
+See the L</FAQ> for details.
+
+=item o pos => $integer
+
+The offset within the input string at which to start processing.
+
+This parameter works in conjunction with the C<length> parameter.
+
+See the L</FAQ> for details.
+
+Default: 0.
 
 =item o text => $a_reference_to_the_string_to_be_parsed
 
@@ -1036,11 +1093,11 @@ Warnings have values < 0, and errors have values > 0.
 
 If the value is > 0, the code calls 'die', and the message has the prefix 'Error: '.
 
-Current values:
+Possible values for error_number() and error_message():
 
 =over 4
 
-=item o 0 => Successful parse
+=item o 0 => "OK"
 
 This is the default value.
 
@@ -1076,6 +1133,12 @@ This limitation is due to the syntax of
 L<Marpa's DSL|https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/DSL.pod>.
 
 This message can never be just a warning message.
+
+=item o 6/-6 => "Parse exhausted"
+
+If L</error_number()> returns 6, it's an error, and if it returns -6 it's a warning.
+
+You can set the option C<exhaustion_is_fatal> to make it fatal.
 
 =back
 
@@ -1114,6 +1177,16 @@ Called by L</format_node($options, $node)>.
 =head2 known_events()
 
 Returns a hashref where the keys are event names and the values are 1.
+
+=head2 length([$integer])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the length of the input string to process.
+
+See also the L</FAQ> and L</pos([$integer])>.
+
+'length' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head2 matching_delimiter()
 
@@ -1178,7 +1251,7 @@ Get or set the option flags.
 
 For typical usage, see scripts/synopsis.pl.
 
-See L</FAQ> for details.
+See the L</FAQ> for details.
 
 'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
@@ -1201,6 +1274,16 @@ See scripts/samples.pl.
 Returns 0 for success and 1 for failure.
 
 If the value is 1, you should call L</error_number()> to find out what happened.
+
+=head2 pos([$integer])
+
+Here, the [] indicate an optional parameter.
+
+Get or set the offset within the input string at which to start processing.
+
+See also the L</FAQ> and L</length([$integer])>.
+
+'pos' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
 =head2 text([$stringref])
 
@@ -1326,6 +1409,21 @@ The backslash is preserved in the output.
 
 See t/escapes.t.
 
+=head2 How do the length and pos parameters to new() work?
+
+The recognizer - an object of type Marpa::R2::Scanless::R - is called in a loop, like this:
+
+	for
+	(
+		$pos = $self -> recce -> read($stringref, $pos, $length);
+		$pos < $length;
+		$pos = $self -> recce -> resume($pos)
+	)
+
+L</pos([$integer])> and L</length([$integer]) can be used to initialize $pos and $length.
+
+See L<https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/R.pod#read> for details.
+
 =head2 Does this package support Unicode/UTF8?
 
 Yes. See t/escapes.t, t/multiple.quotes.t and t/utf8.t.
@@ -1363,7 +1461,9 @@ Firstly, to make these constants available, you must say:
 
 	use Text::Balanced::Marpa ':constants';
 
-Secondly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/escapes.t,
+Secondly, more detail on errors and warnings can be found at L</error_number()>.
+
+Thirdly, for usage of these option flags, see t/angle.brackets.t, t/colons.t, t/escapes.t,
 t/multiple.quotes.t, t/percents.t and scripts/samples.pl.
 
 Now the flags themselves:
@@ -1426,6 +1526,12 @@ It's value is 8.
 This triggers a call to 'die' if the parse is ambiguous.
 
 It's value is 16.
+
+=item o exhaustion_is_fatal
+
+This triggers a call to 'die' if the parse is exhausted.
+
+It's value is 32.
 
 =back
 
