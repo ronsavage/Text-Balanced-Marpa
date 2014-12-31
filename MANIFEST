@@ -12,6 +12,7 @@ README
 scripts/pod2html.sh
 scripts/samples.pl
 scripts/synopsis.pl
+scripts/tiny.pl
 scripts/traverse.pl
 t/angle.brackets.t
 t/braces.t
@@ -21,10 +22,12 @@ t/double.quotes.t
 t/escapes.t
 t/html.t
 t/multiple.quotes.t
+t/non.default.escapes.t
 t/parentheses.t
 t/percents.t
 t/perl.delimiters.t
 t/silly.delimiters.t
 t/single.quotes.t
+t/skip.prefix.t
 t/utf8.t
 xt/author/pod.t
