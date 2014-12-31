@@ -31,7 +31,7 @@ for my $text (@text)
 {
 	$count++;
 
-	ok($parser -> parse(\$text) == 0, "Parsed $text");
+	ok($parser -> parse(\$text) == 0, "Parsed: $text");
 
 	#diag join("\n", @{$parser -> tree2string});
 }

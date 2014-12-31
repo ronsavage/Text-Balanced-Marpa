@@ -423,7 +423,8 @@ sub _process
 	my($self)               = @_;
 	my($stringref)          = $self -> text || \''; # Allow for undef. Use ' in comment for UltraEdit.
 	my($pos)                = $self -> pos;
-	my($length)             = $self -> length || length $$stringref;
+	my($total_length)       = length($$stringref);
+	my($length)             = $self -> length || $total_length;
 	my($text)               = '';
 	my($format)             = "%-20s    %5s    %5s    %5s    %-20s    %-20s\n";
 	my($last_event)         = '';
@@ -450,7 +451,7 @@ sub _process
 	for
 	(
 		$pos = $self -> recce -> read($stringref, $pos, $length);
-		$pos < $length;
+		$pos < $total_length;
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
@@ -932,6 +933,10 @@ In the same vein, see t/angle.brackets.t, for code where the delimiters are just
 
 See t/multiple.delimiters.t.
 
+=item o Skipping (leading) characters in the input string
+
+See t/skip.prefix.t.
+
 =item o Implementing hard-to-read text strings as delimiters
 
 See t/silly.delimiters.
@@ -1039,6 +1044,8 @@ The offset within the input string at which to start processing.
 This parameter works in conjunction with the C<length> parameter.
 
 See the L</FAQ> for details.
+
+Note: The first character in the input string is at pos == 0.
 
 Default: 0.
 
@@ -1421,6 +1428,8 @@ The recognizer - an object of type Marpa::R2::Scanless::R - is called in a loop,
 	)
 
 L</pos([$integer])> and L</length([$integer]) can be used to initialize $pos and $length.
+
+Note: The first character in the input string is at pos == 0.
 
 See L<https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/R.pod#read> for details.
 

@@ -45,11 +45,11 @@ for my $text (@text)
 
 	if ($count == 8)
 	{
-		ok($result == 1, "Deliberate error: Failed to parse $text");
+		ok($result == 1, "Deliberate error: Failed to parse: $text");
 	}
 	else
 	{
-		ok($result == 0, "Parsed $text");
+		ok($result == 0, "Parsed: $text");
 	}
 
 	#diag join("\n", @{$parser -> tree2string});

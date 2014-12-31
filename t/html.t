@@ -62,7 +62,7 @@ for my $text (@text)
 
 	$parser -> text(\$text);
 
-	ok($parser -> parse == 0, "Parsed $text");
+	ok($parser -> parse == 0, "Parsed: $text");
 
 	#diag join("\n", @{$parser -> tree2string});
 }
