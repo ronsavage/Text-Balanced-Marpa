@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+#
+# t/html.pl is another version of this program.
 
 use strict;
 use warnings;
