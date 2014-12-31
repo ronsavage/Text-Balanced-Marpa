@@ -45,7 +45,7 @@ for my $text (@text)
 
 	if ($count == 8)
 	{
-		ok($result == 1, "Deliberate error: Failed to parse: $text");
+		ok($result == 1, "Deliberate error. Failed to parse: $text");
 	}
 	else
 	{

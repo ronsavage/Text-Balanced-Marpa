@@ -249,7 +249,9 @@ END_OF_GRAMMAR
 
 	if ($escape_char eq "'")
 	{
-		$self -> error_message('Single-quote is forbidden as an escape character');
+		my($message) = 'Single-quote is forbidden as an escape character';
+
+		$self -> error_message($message);
 		$self -> error_number(7);
 
 		# This line does use the 'Error: ' prefix, because it is executed before try {} catch {}.
@@ -397,20 +399,20 @@ sub parse
 	{
 		$result = 1;
 
-		if ($self -> recce -> exhausted)
+		if ($self -> recce && $self -> recce -> exhausted)
 		{
-				$message = 'Parse exhausted';
+			$message = 'Parse exhausted';
 
-				$self -> error_message($message);
-				$self -> error_number(6);
+			$self -> error_message($message);
+			$self -> error_number(6);
 
-				die "Error: $message\n" if ($self -> options & exhaustion_is_fatal);
+			die "Error: $message\n" if ($self -> options & exhaustion_is_fatal);
 
-				# If we did not die, then it's a warning message.
+			# If we did not die, then it's a warning message.
 
-				$self -> error_number(-6);
+			$self -> error_number(-6);
 
-				print "Warning: $message\n" if ($self -> options & print_warnings);
+			print "Warning: $message\n" if ($self -> options & print_warnings);
 		}
 		else
 		{
@@ -753,7 +755,6 @@ sub validate_open_close
 
 	my($close_quote);
 	my(%delimiter_action, %delimiter_frequency);
-	my($message);
 	my($open_quote);
 	my($prefix, %prefix);
 
