@@ -454,6 +454,7 @@ sub _process
 	my($self)               = @_;
 	my($stringref)          = $self -> text || \''; # Allow for undef. Use ' in comment for UltraEdit.
 	my($pos)                = $self -> pos;
+	my($first_pos)          = $pos;
 	my($total_length)       = length($$stringref);
 	my($length)             = $self -> length || $total_length;
 	my($text)               = '';
@@ -482,7 +483,7 @@ sub _process
 	for
 	(
 		$pos = $self -> recce -> read($stringref, $pos, $length);
-		$pos < $total_length;
+		($pos < $total_length) && ( ($pos - $first_pos) <= $length);
 		$pos = $self -> recce -> resume($pos)
 	)
 	{

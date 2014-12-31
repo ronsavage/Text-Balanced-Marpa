@@ -3,44 +3,49 @@
 use strict;
 use warnings;
 
-use Text::Balanced::Marpa ':constants';
+use Text::Balanced::Marpa;
 
 # -----------
 
-my($count)    = 0;
-my($maxlevel) = shift || 'debug'; # Try 'info' (without the quotes).
-my($parser)   = Text::Balanced::Marpa -> new
+my($count)  = 0;
+my($parser) = Text::Balanced::Marpa -> new
 (
-	open     => ['{'],
-	close    => ['}'],
-	maxlevel => $maxlevel,
+	open  => ['{'],
+	close => ['}'],
+);
+my(@prefix) =
+(
+	'Skip me ->',
+	"I've already parsed up to here ->",
 );
 my(@text) =
 (
-#	q||,
-#	q|a|,
-	q|{a}|,
+	q|a {b} c {|,
+	q|a {b {c} d} e|,
 );
 
 my($result);
+my($text);
 
-for my $text (@text)
+for my $i (0 .. $#text)
 {
 	$count++;
 
-	if ($maxlevel ne 'notice')
-	{
-		print '-' x 50, "\n";
-		print "Start test  $count. Input |$text|\n";
-	}
+	$text = $prefix[$i] . $text[$i];
+
+	$parser -> pos(length $prefix[$i]);
+	$parser -> length(length($text) - $parser -> pos);
+
+	print '        | ';
+	printf '%10d', $_ for (1 .. 9);
+	print "\n";
+	print '        |';
+	print '0123456789' for (0 .. 8);
+	print "0\n";
+	print "Parsing |$text|. pos: ", $parser -> pos, '. length: ', $parser -> length, "\n";
 
 	$result = $parser -> parse(\$text);
 
 	print join("\n", @{$parser -> tree2string}), "\n";
 	print "Parse result: $result (0 is success)\n";
-
-	if ($maxlevel ne 'notice')
-	{
-		print "Finish test $count. Input |$text|\n";
-	}
 }
