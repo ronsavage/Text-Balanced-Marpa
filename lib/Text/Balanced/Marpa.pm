@@ -241,7 +241,7 @@ text					~ escaped_char
 							| non_quote_char
 END_OF_GRAMMAR
 
-	my($hashref)     = $self -> validate_open_close;
+	my($hashref)     = $self -> _validate_open_close;
 	$bnf             =~ s/_open_/$$hashref{open}/;
 	$bnf             =~ s/_close_/$$hashref{close}/;
 	$bnf             =~ s/_delimiter_/$$hashref{delim}/g;
@@ -254,7 +254,7 @@ END_OF_GRAMMAR
 		$self -> error_message($message);
 		$self -> error_number(7);
 
-		# This line does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
@@ -269,6 +269,9 @@ END_OF_GRAMMAR
 			source => \$self -> bnf
 		})
 	);
+
+	# This hash does not contain the key "'exhausted" because the exhaustion
+	# event is everywhere handled explicitly. Yes, it has a leading quote.
 
 	my(%event);
 
@@ -365,9 +368,9 @@ sub parse
 	(
 		Marpa::R2::Scanless::R -> new
 		({
-			grammar          => $self -> grammar,
-			ranking_method   => 'high_rule_only',
-			#trace_terminals => $self -> trace_terminals,
+			exhaustion     => 'event',
+			grammar        => $self -> grammar,
+			ranking_method => 'high_rule_only',
 		})
 	);
 
@@ -399,33 +402,7 @@ sub parse
 	{
 		$result = 1;
 
-		# This may need to be copied up to the other place where $result == 1.
-		# I really need someway of testing exhaustion.
-		#
-		# We don't use 'die' here. 'die' is used to exit from the _process()'s code.
-
-		if ($self -> recce && $self -> recce -> exhausted)
-		{
-			$message = 'Parse exhausted';
-
-			$self -> error_message($message);
-			$self -> error_number(6);
-
-			if ($self -> options & exhaustion_is_fatal)
-			{
-				print "Error: $message\n";
-			}
-			else
-			{
-				$self -> error_number(-6);
-
-				print "Warning: $message\n" if ($self -> options & print_warnings);
-			}
-		}
-		else
-		{
-			print "Error: Parse failed. ${_}";
-		}
+		print "Error: Parse failed. ${_}";
 	};
 
 	# Return 0 for success and 1 for failure.
@@ -479,6 +456,7 @@ sub _process
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
 	# Also, in read(), we use $pos and $length to avoid reading Ruby Slippers tokens (if any).
+	# For the latter, see scripts/match.parentheses.02.pl in MarpaX::Demo::SampleScripts.
 
 	for
 	(
@@ -491,9 +469,15 @@ sub _process
 		$delimiter_stack           = $self -> delimiter_stack;
 		($start, $span)            = $self -> recce -> pause_span;
 		($event_name, $span, $pos) = $self -> _validate_event($stringref, $start, $span, $pos, $delimiter_frequency);
-		$lexeme                    = $self -> recce -> literal($start, $span);
-		$original_lexeme           = $lexeme;
-		$pos                       = $self -> recce -> lexeme_read($event_name);
+
+		# If the input is exhausted, we exit immediately so we don't try to use
+		# the values of $start, $span or $pos. They are ignored upon exit.
+
+		last if ($event_name eq "'exhausted"); # Yes, it has a leading quote.
+
+		$lexeme          = $self -> recce -> literal($start, $span);
+		$original_lexeme = $lexeme;
+		$pos             = $self -> recce -> lexeme_read($event_name);
 
 		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
@@ -526,6 +510,8 @@ sub _process
 				$self -> error_message($message);
 				$self -> error_number(1);
 
+				# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
+
 				die "$message\n" if ($self -> options & overlap_is_fatal);
 
 				# If we did not die, then it's a warning message.
@@ -551,6 +537,8 @@ sub _process
 
 				$self -> error_message($message);
 				$self -> error_number(2);
+
+				# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
 
 				die "$message\n" if ($self -> options & nesting_is_fatal);
 
@@ -586,7 +574,27 @@ sub _process
 
 	$self -> _save_text($text);
 
-	if (my $status = $self -> recce -> ambiguous)
+	if ($self -> recce -> exhausted)
+	{
+		$message = 'Parse exhausted';
+
+		$self -> error_message($message);
+		$self -> error_number(6);
+
+		if ($self -> options & exhaustion_is_fatal)
+		{
+			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+
+			die "$message\n";
+		}
+		else
+		{
+			$self -> error_number(-6);
+
+			print "Warning: $message\n" if ($self -> options & print_warnings);
+		}
+	}
+	elsif (my $status = $self -> recce -> ambiguous)
 	{
 		my($terminals) = $self -> recce -> terminals_expected;
 		$terminals     = ['(None)'] if ($#$terminals < 0);
@@ -597,13 +605,15 @@ sub _process
 
 		if ($self -> options & ambiguity_is_fatal)
 		{
+			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+
 			die "$message\n";
 		}
 		elsif ($self -> options & print_warnings)
 		{
 			$self -> error_number(-3);
 
-			print "$message\n";
+			print "Warning: $message\n";
 		}
 	}
 
@@ -664,10 +674,19 @@ sub tree2string
 sub _validate_event
 {
 	my($self, $stringref, $start, $span, $pos, $delimiter_frequency) = @_;
-	my(@event)         = @{$self -> recce -> events};
-	my($event_count)   = scalar @event;
-	my(@event_name)    = sort map{$$_[0]} @event;
-	my($event_name)    = $event_name[0]; # Default.
+	my(@event)       = @{$self -> recce -> events};
+	my($event_count) = scalar @event;
+	my(@event_name)  = sort map{$$_[0]} @event;
+	my($event_name)  = $event_name[0]; # Default.
+
+	# If the input is exhausted, we return immediately so we don't try to use
+	# the values of $start, $span or $pos. They are ignored upon return.
+
+	if ($event_name eq "'exhausted") # Yes, it has a leading quote.
+	{
+		return ($event_name, $span, $pos);
+	}
+
 	my($lexeme)        = substr($$stringref, $start, $span);
 	my($line, $column) = $self -> recce -> line_column($start);
 	my($literal)       = $self -> next_few_chars($stringref, $start + $span);
@@ -682,7 +701,17 @@ sub _validate_event
 
 	for (@event_name)
 	{
-		die "Unexpected event name '$_'" if (! ${$self -> known_events}{$_});
+		if (! ${$self -> known_events}{$_})
+		{
+			$message = "Unexpected event name '$_'";
+
+			$self -> error_message($message);
+			$self -> error_number(10);
+
+			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+
+			die "$message\n";
+		}
 	}
 
 	if ($event_count > 1)
@@ -716,7 +745,15 @@ sub _validate_event
 		}
 		else
 		{
-			die "The code only handles 1 event at a time, or a few special cases. \n";
+			$message = join(', ', @event_name);
+			$message = "The code does not handle these events simultaneously: $message";
+
+			$self -> error_message($message);
+			$self -> error_number(11);
+
+			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+
+			die "$message\n";
 		}
 	}
 
@@ -726,7 +763,7 @@ sub _validate_event
 
 # ------------------------------------------------
 
-sub validate_open_close
+sub _validate_open_close
 {
 	my($self)  = @_;
 	my($open)  = $self -> open;
@@ -741,7 +778,7 @@ sub validate_open_close
 		$self -> error_message($message);
 		$self -> error_number(8);
 
-		# This die does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
@@ -753,7 +790,7 @@ sub validate_open_close
 		$self -> error_message($message);
 		$self -> error_number(9);
 
-		# This die does use the 'Error: ' prefix, because it is executed before try {} catch {}.
+		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
@@ -776,7 +813,9 @@ sub validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(4);
 
-			die "$message\n";
+			# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+
+			die "Error: $message\n";
 		}
 
 		if ( ( (length($$open[$i]) > 1) && ($$open[$i] =~ /'/) ) || ( (length($$close[$i]) > 1) && ($$close[$i] =~ /'/) ) )
@@ -786,7 +825,9 @@ sub validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(5);
 
-			die "$message\n";
+			# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+
+			die "Error: $message\n";
 		}
 
 		$seen{open}{$$open[$i]}   = 0 if (! $seen{open}{$$open[$i]});
@@ -847,7 +888,7 @@ sub validate_open_close
 
 	return \%substitute;
 
-} # End of validate_open_close.
+} # End of _validate_open_close.
 
 # ------------------------------------------------
 
@@ -1152,13 +1193,14 @@ Returns the last error or warning number set.
 
 Warnings have values < 0, and errors have values > 0.
 
-If the value is > 0, the code calls 'die', and the message has the prefix 'Error: '.
+If the value is > 0, the message has the prefix 'Error: ', and if the value is < 0, it has the
+prefix 'Warning: '. If this is not the case, it's a reportable bug.
 
 Possible values for error_number() and error_message():
 
 =over 4
 
-=item o 0 => "OK"
+=item o 0 => ""
 
 This is the default value.
 
@@ -1213,6 +1255,19 @@ This message can never be just a warning message.
 This message can never be just a warning message.
 
 =item o 9 => "The # of open delimiters must match the # of close delimiters"
+
+This message can never be just a warning message.
+
+=item o 10 => "Unexpected event name 'xyz'"
+
+Marpa has trigged an event and it's name is not in the hash of event names derived from the BNF.
+
+This message can never be just a warning message.
+
+=item o 11 => "The code does not handle these events simultaneously: a, b, ..."
+
+The code is written to handle single events at a time, or in rare cases, 2 events at the same time.
+But here, multiple events have been triggered and the code cannot handle the given combination.
 
 This message can never be just a warning message.
 
@@ -1607,13 +1662,13 @@ It's value is 8.
 
 =item o ambiguity_is_fatal
 
-This triggers a call to 'die' if the parse is ambiguous.
+This makes L</error_number()> return 3 rather than -3.
 
 It's value is 16.
 
 =item o exhaustion_is_fatal
 
-This triggers a call to 'die' if the parse is exhausted.
+This makes L</error_number()> return 6 rather than -6.
 
 It's value is 32.
 
@@ -1701,6 +1756,10 @@ This runs both standard and author tests:
 See L<https://jeffreykegler.github.io/Ocean-of-Awareness-blog/individual/2014/11/delimiter.html>.
 
 Perhaps this could be a sub-class?
+
+=item o I8N support for error messages
+
+=item o An explicit test program for parse exhaustion
 
 =back
 

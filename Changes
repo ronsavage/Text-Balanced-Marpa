@@ -5,11 +5,14 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Add the length() and pos() mutators, to allow the user to control the call to the recognizer's
 		read() method. See the FAQ.
 	- Add the exhaustion_is_fatal option. See error_number() == 6 for details.
-	- When the parse is successful, error_message() now returns 'OK'. It used to return ''.
 	- Add t/skip.prefix.t to demonstrate pos() and length().
 	- Add scripts/tiny.pl for quick tests without Test::More.
 	- Add the escape_char() mutator, to allow the user to overrider the default backslash escape char.
 	- Add t/non.default.escapes.t to demonstrate escape_char().
+	- Add more error numbers, corresponding the 'die's which were not previously consistent with the
+		way error_numbers and error_messages should be set.
+	- comment explicitly all 'die's within the scope of try{} catch{}, and visa versa. This affects
+		how 'Error: ' is only added once to error messages being printed.
 
 1.01  Mon Dec 29 08:41:00 2014
 	- Stop including the string 'Error: ' twice in error messages.
