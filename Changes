@@ -1,7 +1,7 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
 1.02  Wed Dec 31 11:10:00 2014
-	- Change the default value for text() from '' to \''.
+	- Change the default value for text() from '' to \''. That was a typo fix.
 	- Add the length() and pos() mutators, to allow the user to control the call to the recognizer's
 		read() method. See the FAQ.
 	- Add the exhaustion_is_fatal option. See error_number() == 6 for details.
@@ -11,7 +11,7 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Add t/non.default.escapes.t to demonstrate escape_char().
 	- Add more error numbers, corresponding the 'die's which were not previously consistent with the
 		way error_numbers and error_messages should be set.
-	- comment explicitly all 'die's within the scope of try{} catch{}, and visa versa. This affects
+	- Comment explicitly all 'die's within the scope of try{} catch{}, and visa versa. This affects
 		how 'Error: ' is only added once to error messages being printed.
 
 1.01  Mon Dec 29 08:41:00 2014
