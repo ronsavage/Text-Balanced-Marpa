@@ -1773,7 +1773,7 @@ L<MarpaX::Demo::SampleScripts> - for various usages of L<Marpa::R2>, but not of 
 
 =head1 Machine-Readable Change Log
 
-The file CHANGES was converted into Changelog.ini by L<Module::Metadata::Changes>.
+The file Changes was converted into Changelog.ini by L<Module::Metadata::Changes>.
 
 =head1 Version Numbers
 
