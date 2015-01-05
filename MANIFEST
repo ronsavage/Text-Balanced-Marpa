@@ -2,6 +2,7 @@
 Build.PL
 Changelog.ini
 Changes
+examples/jdurand.01.pl
 lib/Text/Balanced/Marpa.pm
 LICENSE
 Makefile.PL
@@ -30,4 +31,5 @@ t/silly.delimiters.t
 t/single.quotes.t
 t/skip.prefix.t
 t/utf8.t
+xt/author/changes.t
 xt/author/pod.t

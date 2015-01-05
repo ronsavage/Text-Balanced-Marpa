@@ -187,7 +187,7 @@ has text =>
 	required => 0,
 );
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 # ------------------------------------------------
 
@@ -447,7 +447,6 @@ sub _process
 
 	my($delimiter_frequency, $delimiter_stack);
 	my($event_name);
-	my(@fields);
 	my($lexeme);
 	my($message);
 	my($original_lexeme);
@@ -1179,7 +1178,7 @@ The value is incremented for each opening delimiter and decremented for each clo
 
 =head2 error_message()
 
-Returns the last error or warning message set when the code died.
+Returns the last error or warning message set.
 
 Error messages always start with 'Error: '. Messages never end with "\n".
 
@@ -1467,14 +1466,6 @@ The tree looks like:
 	   |           |--- M. Attributes: {# => "5"}
 	   |               |--- N. Attributes: {# => "5"}
 	   |                   |--- O. Attributes: {# => "5"}
-	   |--- D. Attributes: {# => "6"}
-	   |   |--- F. Attributes: {# => "8"}
-	   |       |--- G. Attributes: {# => "8"}
-	   |--- E. Attributes: {# => "7"}
-	   |   |--- F. Attributes: {# => "8"}
-	   |       |--- G. Attributes: {# => "8"}
-	   |--- B. Attributes: {# => "9"}
-	       |--- C. Attributes: {# => "9"}
 
 Or, without attributes:
 
@@ -1495,14 +1486,6 @@ Or, without attributes:
 	   |           |--- M
 	   |               |--- N
 	   |                   |--- O
-	   |--- D
-	   |   |--- F
-	   |       |--- G
-	   |--- E
-	   |   |--- F
-	   |       |--- G
-	   |--- B
-	       |--- C
 
 See scripts/samples.pl.
 
@@ -1557,7 +1540,7 @@ The recognizer - an object of type Marpa::R2::Scanless::R - is called in a loop,
 		$pos = $self -> recce -> resume($pos)
 	)
 
-L</pos([$integer])> and L</length([$integer]) can be used to initialize $pos and $length.
+L</pos([$integer])> and L</length([$integer])> can be used to initialize $pos and $length.
 
 Note: The first character in the input string is at pos == 0.
 
