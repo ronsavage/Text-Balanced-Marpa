@@ -1,12 +1,14 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
 1.03  2015-01-06T08:57:35
-	- Addxt/author/changes.t.
+	- Expand the explanation in the FAQ as to why you can't call escape_char(), open() or close()
+		after calling new().
+	- Add xt/author/changes.t.
 	- Reformat datestamps in this file, so I can use Test::CPAN::Changes in xt/author/changes.t.
 	- Fix typo in URL link in docs.
 	- Remove reduntant code.
 	- Clean up docs.
-	- examples/jdurand.01.pl.
+	- Add examples/jdurand.01.pl.
 
 1.02  2014-12-31 11:10:00
 	- Change the default value for text() from '' to \''. That was a typo fix.
@@ -15,7 +17,7 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Add the exhaustion_is_fatal option. See error_number() == 6 for details.
 	- Add t/skip.prefix.t to demonstrate pos() and length().
 	- Add scripts/tiny.pl for quick tests without Test::More.
-	- Add the escape_char() mutator, to allow the user to overrider the default backslash escape char.
+	- Add the escape_char() mutator, to allow the user to overrider the default escape char.
 	- Add t/non.default.escapes.t to demonstrate escape_char().
 	- Add more error numbers, corresponding the 'die's which were not previously consistent with the
 		way error_numbers and error_messages should be set.

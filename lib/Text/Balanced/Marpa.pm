@@ -940,7 +940,8 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 		if ($count == 3)
 		{
 			print "Deliberate error: Failed to parse |$text|\n";
-			print 'Error number: ', $parser -> error_number, '. Error message: ', $parser -> error_message, "\n";
+			print 'Error number: ', $parser -> error_number, '. Error message: ',
+					$parser -> error_message, "\n";
 		}
 
 		print '-' x 50, "\n";
@@ -1274,11 +1275,9 @@ This message can never be just a warning message.
 
 See L</error_message()>.
 
-=head2 escape_char([$char])
+=head2 escape_char()
 
-Here, the [] indicate an optional parameter.
-
-Get or set the escape char.
+Get the escape char.
 
 =head2 format_node($options, $node)
 
@@ -1527,6 +1526,9 @@ chars and I<all> the colons in the text.
 
 The backslash is preserved in the output.
 
+If you don't want to use backslash for escaping, or can't, you can pass a different escape character
+to L</new()>.
+
 See t/escapes.t.
 
 =head2 How do the length and pos parameters to new() work?
@@ -1554,14 +1556,16 @@ Yes. See t/escapes.t, t/multiple.quotes.t and t/utf8.t.
 
 See t/perl.delimiters.t.
 
-=head2 Warning: calling open() and close() after calling new
+=head2 Warning: Calling mutators after calling new()
 
-Don't do that.
+The only mutator which works after calling new() is L</text([$stringref])>.
 
-To make the code work, you would have to manually call L</validate_open_close()>. But even then
+In particular, you can't call L</escape_char()>, L</open()> or L</close()> after calling L</new()>.
+This is because parameters passed to C<new()> are interpolated into the grammar before parsing
+begins. And that's why the docs for those methods all say 'Get the...' and not 'Get and set the...'.
+
+To make the code work, you would have to manually call _validate_open_close(). But even then
 a lot of things would have to be re-initialized to give the code any hope of working.
-
-And that raises the question: Should the tree of text parsed so far be destroyed and re-initialized?
 
 =head2 What is the format of the 'open' and 'close' parameters to new()?
 
