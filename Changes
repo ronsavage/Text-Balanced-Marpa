@@ -1,6 +1,7 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
 1.03  2015-01-06T08:57:35
+	- No code changes.
 	- Expand the explanation in the FAQ as to why you can't call escape_char(), open() or close()
 		after calling new().
 	- Add xt/author/changes.t.
