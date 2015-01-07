@@ -16,7 +16,7 @@ name: Text-Balanced-Marpa
 provides:
   Text::Balanced::Marpa:
     file: lib/Text/Balanced/Marpa.pm
-    version: '1.03'
+    version: '1.04'
 requires:
   Const::Exporter: v0.2.3
   Marpa::R2: '2.096'
@@ -31,4 +31,4 @@ requires:
 resources:
   license: http://www.perlfoundation.org/artistic_license_2_0
   repository: https://github.com/ronsavage/Text-Balanced-Marpa
-version: '1.03'
+version: '1.04'
