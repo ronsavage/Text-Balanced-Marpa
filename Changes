@@ -1,5 +1,8 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
+1.04  2015-01-08T08:03:38
+	- One of the error/warning messages was in single-quotes, but had to support interpolation.
+
 1.03  2015-01-06T08:57:35
 	- No code changes.
 	- Expand the explanation in the FAQ as to why you can't call escape_char(), open() or close()
