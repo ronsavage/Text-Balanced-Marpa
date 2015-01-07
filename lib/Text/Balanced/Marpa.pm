@@ -607,7 +607,7 @@ sub _process
 	{
 		my($terminals) = $self -> recce -> terminals_expected;
 		$terminals     = ['(None)'] if ($#$terminals < 0);
-		$message       = 'Ambiguous parse. Status: $status. Terminals expected: ' . join(', ', @$terminals);
+		$message       = "Ambiguous parse. Status: $status. Terminals expected: " . join(', ', @$terminals);
 
 		$self -> error_message($message);
 		$self -> error_number(3);
