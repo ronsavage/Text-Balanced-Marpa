@@ -187,6 +187,14 @@ has text =>
 	required => 0,
 );
 
+has uid =>
+(
+	default  => sub{return 0},
+	is       => 'rw',
+	isa      => Int,
+	required => 0,
+);
+
 our $VERSION = '1.03';
 
 # ------------------------------------------------
@@ -288,10 +296,10 @@ END_OF_GRAMMAR
 
 sub _add_daughter
 {
-	my($self, $name, $attributes)  = @_;
-	$attributes ||= {};
-	my($stack)  = $self -> node_stack;
-	my($node)   = Tree -> new($name);
+	my($self, $name, $text)  = @_;
+	my($attributes) = {text => $text, uid => $self -> uid($self -> uid + 1)};
+	my($stack)      = $self -> node_stack;
+	my($node)       = Tree -> new($name);
 
 	$node -> meta($attributes);
 
@@ -377,8 +385,10 @@ sub parse
 	# Since $self -> node_stack has not been initialized yet,
 	# we can't call _add_daughter() until after this statement.
 
+	$self -> uid(0);
 	$self -> tree(Tree -> new('root') );
-	$self -> node_stack([$self -> tree]);
+	$self -> tree -> meta({text => '', uid => $self -> uid});
+	$self -> node_stack([$self -> tree -> root]);
 
 	# Return 0 for success and 1 for failure.
 
@@ -521,7 +531,7 @@ sub _process
 			}
 
 			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', {text => $lexeme});
+			$self -> _add_daughter('close', $lexeme);
 		}
 		elsif ($event_name eq 'open_delim')
 		{
@@ -558,7 +568,7 @@ sub _process
 
 			$self -> delimiter_stack($delimiter_stack);
 
-			$self -> _add_daughter('open', {text => $lexeme});
+			$self -> _add_daughter('open', $lexeme);
 			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'text')
@@ -640,7 +650,7 @@ sub _save_text
 {
 	my($self, $text) = @_;
 
-	$self -> _add_daughter('text', {text => $text}) if (length($text) );
+	$self -> _add_daughter('text', $text) if (length($text) );
 
 	return '';
 
