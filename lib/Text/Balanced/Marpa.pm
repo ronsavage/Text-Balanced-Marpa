@@ -250,9 +250,9 @@ text					~ escaped_char
 END_OF_GRAMMAR
 
 	my($hashref)     = $self -> _validate_open_close;
-	$bnf             =~ s/_open_/$$hashref{open}/;
-	$bnf             =~ s/_close_/$$hashref{close}/;
-	$bnf             =~ s/_delimiter_/$$hashref{delim}/g;
+	$bnf             =~ s/_open_/$$hashref{_open_}/;
+	$bnf             =~ s/_close_/$$hashref{_close_}/;
+	$bnf             =~ s/_delimiter_/$$hashref{_delimiter_}/g;
 	my($escape_char) = $self -> escape_char;
 
 	if ($escape_char eq "'")
@@ -262,7 +262,7 @@ END_OF_GRAMMAR
 		$self -> error_message($message);
 		$self -> error_number(7);
 
-		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+		# This 'die' is not inside try{}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
@@ -547,7 +547,7 @@ sub _process
 				$self -> error_message($message);
 				$self -> error_number(2);
 
-				# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+				# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
 
 				die "$message\n" if ($self -> options & nesting_is_fatal);
 
@@ -592,7 +592,7 @@ sub _process
 
 		if ($self -> options & exhaustion_is_fatal)
 		{
-			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+			# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
 
 			die "$message\n";
 		}
@@ -614,7 +614,7 @@ sub _process
 
 		if ($self -> options & ambiguity_is_fatal)
 		{
-			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+			# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
 
 			die "$message\n";
 		}
@@ -717,7 +717,7 @@ sub _validate_event
 			$self -> error_message($message);
 			$self -> error_number(10);
 
-			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+			# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
 
 			die "$message\n";
 		}
@@ -760,7 +760,7 @@ sub _validate_event
 			$self -> error_message($message);
 			$self -> error_number(11);
 
-			# This 'die' is inside try {}catch{}, which adds the prefix 'Error: '.
+			# This 'die' is inside try{}catch{}, which adds the prefix 'Error: '.
 
 			die "$message\n";
 		}
@@ -787,7 +787,7 @@ sub _validate_open_close
 		$self -> error_message($message);
 		$self -> error_number(8);
 
-		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+		# This 'die' is not inside try{}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
@@ -799,12 +799,12 @@ sub _validate_open_close
 		$self -> error_message($message);
 		$self -> error_number(9);
 
-		# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+		# This 'die' is not inside try{}catch{}, so we add the prefix 'Error: '.
 
 		die "Error: $message\n";
 	}
 
-	my(%substitute)         = (close => '', delim => '', open => '');
+	my(%substitute)         = (_close_ => '', _delimiter_ => '', _open_ => '');
 	my($matching_delimiter) = {};
 	my(%seen)               = (close => {}, open => {});
 
@@ -822,7 +822,7 @@ sub _validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(4);
 
-			# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+			# This 'die' is not inside try{}catch{}, so we add the prefix 'Error: '.
 
 			die "Error: $message\n";
 		}
@@ -834,7 +834,7 @@ sub _validate_open_close
 			$self -> error_message($message);
 			$self -> error_number(5);
 
-			# This 'die' is not inside try {}catch{}, so we add the prefix 'Error: '.
+			# This 'die' is not inside try{}catch{}, so we add the prefix 'Error: '.
 
 			die "Error: $message\n";
 		}
@@ -873,22 +873,22 @@ sub _validate_open_close
 			$close_quote = "'$$close[$i]'";
 		}
 
-		$substitute{open}  .= "open_delim\t\t\t\~ $open_quote\n"   if ($seen{open}{$$open[$i]} <= 1);
-		$substitute{close} .= "close_delim\t\t\t\~ $close_quote\n" if ($seen{close}{$$close[$i]} <= 1);
-		$prefix            = substr($$open[$i], 0, 1);
-		$prefix            = "\\$prefix" if ($prefix =~ /[\[\]]/);
-		$prefix{$prefix}   = 0 if (! $prefix{$prefix});
+		$substitute{_open_}  .= "open_delim\t\t\t\~ $open_quote\n"   if ($seen{open}{$$open[$i]} <= 1);
+		$substitute{_close_} .= "close_delim\t\t\t\~ $close_quote\n" if ($seen{close}{$$close[$i]} <= 1);
+		$prefix              = substr($$open[$i], 0, 1);
+		$prefix              = "\\$prefix" if ($prefix =~ /[\[\]]/);
+		$prefix{$prefix}     = 0 if (! $prefix{$prefix});
 
 		$prefix{$prefix}++;
 
-		$substitute{delim} .= $prefix if ($prefix{$prefix} == 1);
-		$prefix            = substr($$close[$i], 0, 1);
-		$prefix            = "\\$prefix" if ($prefix =~ /[\[\]]/);
-		$prefix{$prefix}   = 0 if (! $prefix{$prefix});
+		$substitute{_delimiter_} .= $prefix if ($prefix{$prefix} == 1);
+		$prefix                  = substr($$close[$i], 0, 1);
+		$prefix                  = "\\$prefix" if ($prefix =~ /[\[\]]/);
+		$prefix{$prefix}         = 0 if (! $prefix{$prefix});
 
 		$prefix{$prefix}++;
 
-		$substitute{delim} .= $prefix if ($prefix{$prefix} == 1);
+		$substitute{_delimiter_} .= $prefix if ($prefix{$prefix} == 1);
 	}
 
 	$self -> delimiter_action(\%delimiter_action);
