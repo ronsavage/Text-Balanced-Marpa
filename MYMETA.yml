@@ -21,7 +21,7 @@ requires:
   Const::Exporter: v0.2.3
   Marpa::R2: '2.096'
   Moo: '1.006'
-  Tree: '1.05'
+  Tree: '1.06'
   Try::Tiny: '0.09'
   Types::Standard: '1.000004'
   open: '0'
