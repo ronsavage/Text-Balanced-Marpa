@@ -1,5 +1,10 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
+1.05  2015-01-09T17:45:12
+	- Move tree2string(), and all the methods it uses - node2string(), format_node() and
+		hashref2string() -, into the Tree V 1.06 class. This means that all the code which used to
+		use $parser -> tree2string now needs to use $parser -> tree -> tree2string.
+
 1.04  2015-01-08T08:03:38
 	- One of the error/warning messages was in single-quotes, but had to support interpolation.
 

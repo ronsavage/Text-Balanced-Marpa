@@ -31,7 +31,7 @@ for my $text (@text)
 
 	$result = $parser -> parse(\$text);
 
-	print join("\n", @{$parser -> tree2string}), "\n";
+	print join("\n", @{$parser -> tree -> tree2string}), "\n";
 	print "Parse result: $result (0 is success)\n";
 
 	if ($count == 3)

@@ -42,7 +42,7 @@ for my $text (@text)
 		ok($result == 0, "Parsed: $text");
 	}
 
-	#diag join("\n", @{$parser -> tree2string});
+	#diag join("\n", @{$parser -> tree -> tree2string});
 }
 
 print "# Internal test count: $count\n";

@@ -195,7 +195,7 @@ has uid =>
 	required => 0,
 );
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 # ------------------------------------------------
 
@@ -307,29 +307,6 @@ sub _add_daughter
 
 } # End of _add_daughter.
 
-# -----------------------------------------------
-
-sub format_node
-{
-	my($self, $options, $node) = @_;
-	my($s) = $node -> value;
-	$s     .= '. Attributes: ' . $self -> hashref2string($node -> meta) if (! $$options{no_attributes});
-
-	return $s;
-
-} # End of format_node.
-
-# -----------------------------------------------
-
-sub hashref2string
-{
-	my($self, $hashref) = @_;
-	$hashref ||= {};
-
-	return '{' . join(', ', map{qq|$_ => "$$hashref{$_}"|} sort keys %$hashref) . '}';
-
-} # End of hashref2string.
-
 # ------------------------------------------------
 
 sub next_few_chars
@@ -343,27 +320,6 @@ sub next_few_chars
 	return $s;
 
 } # End of next_few_chars.
-
-# -----------------------------------------------
-
-sub node2string
-{
-	my($self, $options, $is_last_node, $node, $vert_dashes) = @_;
-	my($depth)         = $node -> depth;
-	my($sibling_count) = defined $node -> is_root ? 1 : scalar $node -> parent -> children;
-	my($offset)        = ' ' x 4;
-	my(@indent)        = map{$$vert_dashes[$_] || $offset} 0 .. $depth - 1;
-	@$vert_dashes      =
-	(
-		@indent,
-		($sibling_count == 0 ? $offset : '   |'),
-	);
-
-	$indent[1] = '    ' if ($is_last_node && ($depth > 1) );
-
-	return join('', @indent[1 .. $#indent]) . ($depth ? '   |--- ' : '') . $self -> format_node($options, $node);
-
-} # End of node2string.
 
 # ------------------------------------------------
 
@@ -656,28 +612,6 @@ sub _save_text
 
 } # End of _save_text.
 
-# -----------------------------------------------
-
-sub tree2string
-{
-	my($self, $options, $tree) = @_;
-	$options                   ||= {};
-	$$options{no_attributes}   ||= 0;
-	$tree                      ||= $self -> tree;
-	my(@nodes)                 = $tree -> traverse;
-
-	my(@out);
-	my(@vert_dashes);
-
-	for my $i (0 .. $#nodes)
-	{
-		push @out, $self -> node2string($options, $i == $#nodes, $nodes[$i], \@vert_dashes);
-	}
-
-	return [@out];
-
-} # End of tree2string.
-
 # ------------------------------------------------
 
 sub _validate_event
@@ -944,7 +878,7 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 		$result = $parser -> parse(\$text);
 
-		print join("\n", @{$parser -> tree2string}), "\n";
+		print join("\n", @{$parser -> tree -> tree2string}), "\n";
 		print "Parse result: $result (0 is success)\n";
 
 		if ($count == 3)
@@ -1289,36 +1223,6 @@ See L</error_message()>.
 
 Get the escape char.
 
-=head2 format_node($options, $node)
-
-Returns a string consisting of the node's name and, optionally, it's attributes.
-
-Possible keys in the $options hashref:
-
-=over 4
-
-=item o no_attributes => $Boolean
-
-If 1, the node's attributes are not included in the string returned.
-
-Default: 0 (include attributes).
-
-=back
-
-Calls L</hashref2string($hashref)>.
-
-Called by L</node2string($options, $is_last_node, $node, $vert_dashes)>.
-
-You would not normally call this method.
-
-If you don't wish to supply options, use format_node({}, $node).
-
-=head2 hashref2string($hashref)
-
-Returns the given hashref as a string.
-
-Called by L</format_node($options, $node)>.
-
 =head2 known_events()
 
 Returns a hashref where the keys are event names and the values are 1.
@@ -1355,28 +1259,6 @@ Here, the [] indicate an optional parameter.
 Get or set the number of characters called 'the next few chars', which are printed during debugging.
 
 'next_few_limit' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
-
-=head2 node2string($options, $is_last_node, $node, $vert_dashes)
-
-Returns a string of the node's name and attributes, with a leading indent, suitable for printing.
-
-Possible keys in the $options hashref:
-
-=over 4
-
-=item o no_attributes => $Boolean
-
-If 1, the node's attributes are not included in the string returned.
-
-Default: 0 (include attributes).
-
-=back
-
-Ignore the parameter $vert_dashes. The code uses it as temporary storage.
-
-Calls L</format_node($options, $node)>.
-
-Called by L</tree2string($options, [$some_tree])>.
 
 =head2 open()
 
@@ -1445,80 +1327,6 @@ Returns an object of type L<Tree>, which holds the parsed data.
 Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
 
 See scripts/traverse.pl for sample code which processes this tree's nodes.
-
-=head2 tree2string($options, [$some_tree])
-
-Here, the [] represent an optional parameter.
-
-If $some_tree is not supplied, uses the calling object's tree ($self -> tree).
-
-Returns an arrayref of lines, suitable for printing. These lines do not end in "\n".
-
-Draws a nice ASCII-art representation of the tree structure.
-
-The tree looks like:
-
-	Root. Attributes: {# => "0"}
-	   |--- I. Attributes: {# => "1"}
-	   |   |--- J. Attributes: {# => "3"}
-	   |   |   |--- K. Attributes: {# => "3"}
-	   |   |--- J. Attributes: {# => "4"}
-	   |       |--- L. Attributes: {# => "5"}
-	   |           |--- M. Attributes: {# => "5"}
-	   |               |--- N. Attributes: {# => "5"}
-	   |                   |--- O. Attributes: {# => "5"}
-	   |--- H. Attributes: {# => "2"}
-	   |   |--- J. Attributes: {# => "3"}
-	   |   |   |--- K. Attributes: {# => "3"}
-	   |   |--- J. Attributes: {# => "4"}
-	   |       |--- L. Attributes: {# => "5"}
-	   |           |--- M. Attributes: {# => "5"}
-	   |               |--- N. Attributes: {# => "5"}
-	   |                   |--- O. Attributes: {# => "5"}
-
-Or, without attributes:
-
-	Root
-	   |--- I
-	   |   |--- J
-	   |   |   |--- K
-	   |   |--- J
-	   |       |--- L
-	   |           |--- M
-	   |               |--- N
-	   |                   |--- O
-	   |--- H
-	   |   |--- J
-	   |   |   |--- K
-	   |   |--- J
-	   |       |--- L
-	   |           |--- M
-	   |               |--- N
-	   |                   |--- O
-
-See scripts/samples.pl.
-
-Example usage:
-
-  print map("$_\n", @{$tree -> tree2string});
-
-Can be called with $some_tree set to any $node, and will print the tree assuming $node is the root.
-
-If you don't wish to supply options, use tree2string({}, $node).
-
-Possible keys in the $options hashref (which defaults to {}):
-
-=over 4
-
-=item o no_attributes => $Boolean
-
-If 1, the node's attributes are not included in the string returned.
-
-Default: 0 (include attributes).
-
-=back
-
-Calls L</node2string($options, $is_last_node, $node, $vert_dashes)>.
 
 =head1 FAQ
 
