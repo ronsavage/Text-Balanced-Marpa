@@ -330,10 +330,10 @@ sub parse
 
 	# Emulate parts of new(), which makes things a bit earier for the caller.
 
-	$self -> options($options) if (defined $opts{options});
-	$self -> text($text)       if (defined $opts{text});
-	$self -> pos($pos)         if (defined $opts{pos});
-	$self -> length($length)   if (defined $opts{length});
+	$self -> options($opts{options}) if (defined $opts{options});
+	$self -> text($opts{text})       if (defined $opts{text});
+	$self -> pos($opts{pos})         if (defined $opts{pos});
+	$self -> length($opts{length})   if (defined $opts{length});
 
 	$self -> recce
 	(
