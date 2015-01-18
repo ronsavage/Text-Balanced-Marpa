@@ -60,7 +60,7 @@ for my $text (@text)
 {
 	$count++;
 
-	$parser -> text(text => \$text);
+	$parser -> text(\$text);
 
 	ok($parser -> parse == 0, "Parsed: $text");
 
