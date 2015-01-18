@@ -55,7 +55,7 @@ for my $text (@text)
 		print "Start test  $count. Input |$text|\n";
 	}
 
-	$result = $parser -> parse(\$text);
+	$result = $parser -> parse(text => \$text);
 
 	print join("\n", @{$parser -> tree -> tree2string}), "\n";
 	print "Parse result: $result (0 is success)\n";

@@ -41,7 +41,7 @@ for my $text (@text)
 {
 	$count++;
 
-	$result = $parser -> parse(\$text);
+	$result = $parser -> parse(text => \$text);
 
 	if ($count == 8)
 	{

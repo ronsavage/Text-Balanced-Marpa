@@ -9,12 +9,13 @@ use open     qw(:std :utf8); # Undeclared streams in UTF-8.
 use Const::Exporter constants =>
 [
 	nothing_is_fatal    =>  0, # The default.
-	debug               =>  1,
+	print_errors        =>  1,
 	print_warnings      =>  2,
-	overlap_is_fatal    =>  4,
-	nesting_is_fatal    =>  8,
-	ambiguity_is_fatal  => 16,
-	exhaustion_is_fatal => 32,
+	print_debugs        =>  4,
+	overlap_is_fatal    =>  8,
+	nesting_is_fatal    => 16,
+	ambiguity_is_fatal  => 32,
+	exhaustion_is_fatal => 64,
 ];
 
 use Marpa::R2;
@@ -195,7 +196,7 @@ has uid =>
 	required => 0,
 );
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
 # ------------------------------------------------
 
@@ -325,8 +326,14 @@ sub next_few_chars
 
 sub parse
 {
-	my($self, $stringref) = @_;
-	$self -> text($stringref) if (defined $stringref);
+	my($self, %opts) = @_;
+
+	# Emulate parts of new(), which makes things a bit earier for the caller.
+
+	$self -> options($options) if (defined $opts{options});
+	$self -> text($text)       if (defined $opts{text});
+	$self -> pos($pos)         if (defined $opts{pos});
+	$self -> length($length)   if (defined $opts{length});
 
 	$self -> recce
 	(
@@ -361,14 +368,14 @@ sub parse
 		{
 			$result = 1;
 
-			print "Error: Parse failed\n";
+			print "Error: Parse failed\n" if ($self -> options & print_errors);
 		}
 	}
 	catch
 	{
 		$result = 1;
 
-		print "Error: Parse failed. ${_}";
+		print "Error: Parse failed. ${_}" if ($self -> options & print_errors);
 	};
 
 	# Return 0 for success and 1 for failure.
@@ -405,7 +412,7 @@ sub _process
 	my($last_event)         = '';
 	my($matching_delimiter) = $self -> matching_delimiter;
 
-	if ($self -> options & debug)
+	if ($self -> options & print_debugs)
 	{
 		print "Length of input: $length. Input |$$stringref|\n";
 		print sprintf($format, 'Event', 'Start', 'Span', 'Pos', 'Lexeme', 'Comment');
@@ -446,7 +453,7 @@ sub _process
 
 		die "lexeme_read($event_name) rejected lexeme |$lexeme|\n" if (! defined $pos);
 
-		print sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') if ($self -> options & debug);
+		print sprintf($format, $event_name, $start, $span, $pos, $lexeme, '-') if ($self -> options & print_debugs);
 
 		if ($event_name ne 'text')
 		{
@@ -636,7 +643,7 @@ sub _validate_event
 	my($message)       = "Location: ($line, $column). Lexeme: |$lexeme|. Next few chars: |$literal|";
 	$message           = "$message. Events: $event_count. Names: ";
 
-	print $message, join(', ', @event_name), "\n" if ($self -> options & debug);
+	print $message, join(', ', @event_name), "\n" if ($self -> options & print_debugs);
 
 	my(%event_name);
 
@@ -665,7 +672,7 @@ sub _validate_event
 		{
 			$event_name = $$delimiter_action{$lexeme};
 
-			print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
+			print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & print_debugs);
 		}
 		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
 		{
@@ -677,13 +684,13 @@ sub _validate_event
 			{
 				$event_name = 'open_delim';
 
-				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
+				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & print_debugs);
 			}
 			else
 			{
 				$event_name = 'close_delim';
 
-				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & debug);
+				print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & print_debugs);
 			}
 		}
 		else
@@ -876,7 +883,7 @@ C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
 
 		print "Parsing |$text|\n";
 
-		$result = $parser -> parse(\$text);
+		$result = $parser -> parse(text => \$text);
 
 		print join("\n", @{$parser -> tree -> tree2string}), "\n";
 		print "Parse result: $result (0 is success)\n";
@@ -1044,6 +1051,8 @@ The maxiumum length of the input string to process.
 
 This parameter works in conjunction with the C<pos> parameter.
 
+C<length> can also be used as a key in the hash passed to L</parse([%hash])>.
+
 See the L</FAQ> for details.
 
 Default: Calls Perl's length() function on the input string.
@@ -1072,6 +1081,8 @@ Default: None.
 
 This allows you to turn on various options.
 
+C<options> can also be used as a key in the hash passed to L</parse([%hash])>.
+
 Default: 0 (nothing is fatal).
 
 See the L</FAQ> for details.
@@ -1082,13 +1093,20 @@ The offset within the input string at which to start processing.
 
 This parameter works in conjunction with the C<length> parameter.
 
+C<pos> can also be used as a key in the hash passed to L</parse([%hash])>.
+
 See the L</FAQ> for details.
 
 Note: The first character in the input string is at pos == 0.
 
 Default: 0.
 
-=item o text => $a_reference_to_the_string_to_be_parsed
+=item o text => $stringref
+
+This is a reference to the string to be parsed. A stringref is used to avoid copying what could
+potentially be a very long string.
+
+C<text> can also be used as a key in the hash passed to L</parse([%hash])>.
 
 Default: \''.
 
@@ -1282,7 +1300,7 @@ See the L</FAQ> for details.
 
 'options' is a parameter to L</new()>. See L</Constructor and Initialization> for details.
 
-=head2 parse([$stringref])
+=head2 parse([%hash])
 
 Here, the [] indicate an optional parameter.
 
@@ -1291,10 +1309,24 @@ This is the only method the user needs to call. All data can be supplied when ca
 You can of course call other methods (e.g. L</text([$stringref])> ) after calling L</new()> but
 before calling C<parse()>.
 
-Note: If a stringref is passed to C<parse()>, it takes precedence over any stringref passed to
-C<< new(text => $stringref) >>, and over any stringref passed to L</text([$stringref])>. Further,
-the stringref passed to C<parse()> is passed to L</text([$stringref])>, meaning any subsequent
-call to C<text()> returns the stringref passed to C<parse()>.
+The optional hash takes these ($key => $value) pairs (exactly the same as for L</new()>):
+
+=over 4
+
+=item o length => $integer
+
+=item o options => $bit_string
+
+=item o pos => $integer
+
+=item o text => $stringref
+
+=back
+
+Note: If a value is passed to C<parse()>, it takes precedence over any value with the same
+key passed to L</new()>, and over any value previously passed to the method whose name is $key.
+Further, the value passed to C<parse()> is always passed to the corresponding method (i.e. whose
+name is $key), meaning any subsequent call to that method returns the value passed to C<parse()>.
 
 See scripts/samples.pl.
 
@@ -1418,13 +1450,13 @@ Now the flags themselves:
 
 This is the default.
 
-It's value is 0.
+C<nothing_is_fatal> has the value of 0.
 
-=item o debug
+=item o print_error
 
-Print extra stuff if this flag is set.
+Print errors if this flag is set.
 
-It's value is 1.
+C<print_errors> has the value of 1.
 
 =item o print_warnings
 
@@ -1442,7 +1474,13 @@ Ambiguity is not, in and of itself, an error. But see the C<ambiguity_is_fatal> 
 
 It's tempting to call this option C<warnings>, but Perl already has C<use warnings>, so I didn't.
 
-It's value is 2.
+C<print_warnings> has the value of 2.
+
+=item o print_debugs
+
+Print extra stuff if this flag is set.
+
+C<print_debugs> has the value of 4.
 
 =item o overlap_is_fatal
 
@@ -1455,7 +1493,7 @@ if you try to use the delimiters of '<' and '>' for HTML. That is, '<i><b>Bold I
 not an error because what overlap are '<b>' and '</i>' BUT THEY ARE NOT TAGS. The tags are '<' and
 '>', ok? See also t/html.t.
 
-It's value is 4.
+C<overlap_is_fatal> has the value of 8.
 
 =item o nesting_is_fatal
 
@@ -1463,19 +1501,19 @@ This means nesting of identical opening delimiters is fatal.
 
 So, using C<nesting_is_fatal> means 'a <: b <: c :> d :> e' would be a fatal error.
 
-It's value is 8.
+C<nesting_is_fatal> has the value of 16.
 
 =item o ambiguity_is_fatal
 
 This makes L</error_number()> return 3 rather than -3.
 
-It's value is 16.
+C<ambiguity_is_fatal> has the value of 32.
 
 =item o exhaustion_is_fatal
 
 This makes L</error_number()> return 6 rather than -6.
 
-It's value is 32.
+C<exhaustion_is_fatal> has the value of 64.
 
 =back
 

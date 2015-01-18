@@ -29,7 +29,7 @@ for my $text (@text)
 
 	print "Parsing |$text|\n";
 
-	$result = $parser -> parse(\$text);
+	$result = $parser -> parse(parse => \$text);
 
 	print join("\n", @{$parser -> tree -> tree2string}), "\n";
 	print "Parse result: $result (0 is success)\n";

@@ -1,5 +1,15 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
+1.06  2015-01-19T09:39:00
+	- Warning: Incompatible change. The method parse() now takes a hash, whose keys can be any of
+		of these: length, options, pos and text.
+	- Warning: Incompatible change. The constant debug is now called print_debugs. This makes it
+		less likely the name will clash with your pre-existing code.
+	- Warning: Incompatible change. Add the new constant print_errors. Since this constant is off by
+		default, errors are not printed until you use this contant. This means the code is quieter.
+	- Patch the docs to match.
+	- Patch the sample code and test code to match.
+
 1.05  2015-01-09T17:45:12
 	- Move tree2string(), and all the methods it uses - node2string(), format_node() and
 		hashref2string() -, into the Tree V 1.06 class. This means that all the code which used to
