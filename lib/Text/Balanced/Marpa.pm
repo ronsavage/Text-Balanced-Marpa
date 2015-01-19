@@ -196,7 +196,7 @@ has uid =>
 	required => 0,
 );
 
-our $VERSION = '1.06';
+our $VERSION = '1.07';
 
 # ------------------------------------------------
 
@@ -666,15 +666,7 @@ sub _validate_event
 
 	if ($event_count > 1)
 	{
-		my($delimiter_action) = $self -> delimiter_action;
-
-		if (defined $event_name{string})
-		{
-			$event_name = $$delimiter_action{$lexeme};
-
-			print "Disambiguated lexeme |$lexeme| as '$event_name'\n" if ($self -> options & print_debugs);
-		}
-		elsif ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
+		if ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
 		{
 			# At the time _validate_event() is called, the quote count has not yet been bumped.
 			# If this is the 1st quote, then it's an open_delim.
