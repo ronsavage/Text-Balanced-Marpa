@@ -1,7 +1,10 @@
 #!/bin/bash
 
-FILE=Perl-modules/html/Text/Balanced/Marpa.html
+DIR=Perl-modules/html/Text/Balanced
+FILE=Marpa.html
 
-pod2html.pl -i lib/Text/Balanced/Marpa.pm -o $DR/$FILE
+mkdir -p $DR/$DIR ~/savage.net.au/$DIR
 
-cp $DR/$FILE ~/savage.net.au/$FILE
+pod2html.pl -i lib/Text/Balanced/Marpa.pm -o $DR/$DIR/$FILE
+
+cp $DR/$DIR/$FILE ~/savage.net.au/$DIR
