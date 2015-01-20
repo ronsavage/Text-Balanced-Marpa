@@ -52,19 +52,19 @@ has delimiter_action =>
 	required => 0,
 );
 
-has delimiter_stack =>
-(
-	default  => sub{return []},
-	is       => 'rw',
-	isa      => ArrayRef,
-	required => 0,
-);
-
 has delimiter_frequency =>
 (
 	default  => sub{return {} },
 	is       => 'rw',
 	isa      => HashRef,
+	required => 0,
+);
+
+has delimiter_stack =>
+(
+	default  => sub{return []},
+	is       => 'rw',
+	isa      => ArrayRef,
 	required => 0,
 );
 
@@ -501,7 +501,7 @@ sub _process
 			$$delimiter_frequency{$$matching_delimiter{$lexeme} }++;
 
 			# If the top of the delimiter stack reaches 2, then there's an error.
-			# Unlink mismatched delimiters (just above), this is never gets a warning.
+			# Unlike mismatched delimiters (just above), this is never gets a warning.
 
 			if ($$delimiter_frequency{$$matching_delimiter{$lexeme} } > 1)
 			{
@@ -530,7 +530,6 @@ sub _process
 				};
 
 			$self -> delimiter_stack($delimiter_stack);
-
 			$self -> _add_daughter('open', $lexeme);
 			$self -> _push_node_stack;
 		}
@@ -666,6 +665,9 @@ sub _validate_event
 
 	if ($event_count > 1)
 	{
+		# We get here for single and double quotes because an open s. or d. quote is
+		# indistinguishable from a close s. or d. quote, and that leads to ambiguity.
+
 		if ( ($lexeme =~ /["']/) && (join(', ', @event_name) eq 'close_delim, open_delim') ) # ".
 		{
 			# At the time _validate_event() is called, the quote count has not yet been bumped.
