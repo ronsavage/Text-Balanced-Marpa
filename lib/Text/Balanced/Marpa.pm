@@ -521,14 +521,13 @@ sub _process
 				print "Warning: $message\n" if ($self -> options & print_warnings);
 			}
 
-			$self -> delimiter_frequency($delimiter_frequency);
-
 			push @$delimiter_stack,
 				{
 					count  => $$delimiter_frequency{$$matching_delimiter{$lexeme} },
 					lexeme => $lexeme,
 				};
 
+			$self -> delimiter_frequency($delimiter_frequency);
 			$self -> delimiter_stack($delimiter_stack);
 			$self -> _add_daughter('open', $lexeme);
 			$self -> _push_node_stack;
@@ -1446,7 +1445,7 @@ This is the default.
 
 C<nothing_is_fatal> has the value of 0.
 
-=item o print_error
+=item o print_errors
 
 Print errors if this flag is set.
 
@@ -1602,9 +1601,11 @@ Perhaps this could be a sub-class?
 
 =head1 See Also
 
-L<Text::Balanced>.
+L<Text::Delimited::Marpa>.
 
 L<Tree> and L<Tree::Persist>.
+
+L<Text::Balanced>.
 
 L<MarpaX::Demo::SampleScripts> - for various usages of L<Marpa::R2>, but not of this module.
 
