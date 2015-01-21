@@ -297,10 +297,10 @@ END_OF_GRAMMAR
 
 sub _add_daughter
 {
-	my($self, $name, $text)  = @_;
-	my($attributes) = {text => $text, uid => $self -> uid($self -> uid + 1)};
-	my($stack)      = $self -> node_stack;
-	my($node)       = Tree -> new($name);
+	my($self, $name, $attributes) = @_;
+	$attributes = {%$attributes, uid => $self -> uid($self -> uid + 1)};
+	my($stack)  = $self -> node_stack;
+	my($node)   = Tree -> new($name);
 
 	$node -> meta($attributes);
 
@@ -494,7 +494,7 @@ sub _process
 			}
 
 			$self -> _pop_node_stack;
-			$self -> _add_daughter('close', $lexeme);
+			$self -> _add_daughter('close', {text => $lexeme});
 		}
 		elsif ($event_name eq 'open_delim')
 		{
@@ -529,7 +529,7 @@ sub _process
 
 			$self -> delimiter_frequency($delimiter_frequency);
 			$self -> delimiter_stack($delimiter_stack);
-			$self -> _add_daughter('open', $lexeme);
+			$self -> _add_daughter('open', {text => $lexeme});
 			$self -> _push_node_stack;
 		}
 		elsif ($event_name eq 'text')
@@ -611,7 +611,7 @@ sub _save_text
 {
 	my($self, $text) = @_;
 
-	$self -> _add_daughter('text', $text) if (length($text) );
+	$self -> _add_daughter('text', {text => $text}) if (length($text) );
 
 	return '';
 
