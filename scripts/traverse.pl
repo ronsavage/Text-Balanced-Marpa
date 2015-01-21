@@ -1,55 +1,31 @@
 #!/usr/bin/env perl
-#
-# t/html.pl is another version of this program.
 
 use strict;
 use warnings;
 
-use Text::Balanced::Marpa;
+use Text::Balanced::Marpa ':constants';
 
 # -----------
 
 my($parser) = Text::Balanced::Marpa -> new
 (
-	open =>
-	[
-		'<html>',
-		'<head>',
-		'<title>',
-		'<body>',
-		'<h1>',
-		'<table>',
-		'<tr>',
-		'<td>',
-	],
-	close =>
-	[
-		'</html>',
-		'</head>',
-		'</title>',
-		'</body>',
-		'</h1>',
-		'</table>',
-		'</tr>',
-		'</td>',
-	],
+	open    => ['<:'],
+	close   => [':>'],
+	options => print_errors | overlap_is_fatal,
 );
-my($text) =
-q|
-<html>
-	<head>
-		<title>A Title</title>
-	</head>
-	<body>
-		<h1>A H1 Heading</h1>
-		<table>
-			<tr>
-				<td>A table cell</td>
-			</tr>
-		</table>
-	</body>
-</html>
-|;
+my($text) = q|a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k|;
+my($span) = 0;
+
+my($result);
+
+print '        | ';
+printf '%10d', $_ for (1 .. 9);
+print "\n";
+print '        |';
+print '0123456789' for (0 .. 8);
+print "0\n";
+print "Parsing |$text|. \n";
+print "Span  Text\n";
 
 if ($parser -> parse(text => \$text) == 0)
 {
@@ -61,12 +37,12 @@ if ($parser -> parse(text => \$text) == 0)
 	{
 		next if ($node -> is_root);
 
+		$span++;
+
 		$attributes = $node -> meta;
 		$text       = $$attributes{text};
-		$text       =~ s/^\s+//;
-		$text       =~ s/\s+$//;
 		$indent     = $node -> depth - 1;
 
-		print "\t" x $indent, "$text\n" if (length($text) );
+		print sprintf("%4d  %-s\n", $span, '  ' x $indent . "|$text|") if (length($text) );
 	}
 }

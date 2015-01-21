@@ -929,10 +929,19 @@ This is the printout of synopsis.pl:
 	Error number: 2. Error message: Opened delimiter <: again before closing previous one
 	--------------------------------------------------
 
+See also scripts/tiny.pl and scripts/traverse.pl.
+
 =head1 Description
 
 L<Text::Balanced::Marpa> provides a L<Marpa::R2>-based parser for extracting delimited text
-sequences from strings.
+sequences from strings. The text outside and inside the delimiters, and delimiters themselves, are
+all stored as nodes in a tree managed by L<Tree>.
+
+Nested strings, with the same or different delimiters, are stored as daughters of the nodes which
+hold the delimiters.
+
+This module is a companion to L<Text::Delimited::Marpa>. The differences are discussed in the L</FAQ>
+below.
 
 See the L</FAQ> for various topics, including:
 
@@ -964,7 +973,7 @@ See t/colons.t and t/percents.t.
 
 =item o Implementing a really trivial HTML parser
 
-See scripts/traverse.pl and t/html.t.
+See t/html.t.
 
 In the same vein, see t/angle.brackets.t, for code where the delimiters are just '<' and '>'.
 
@@ -1354,6 +1363,98 @@ Obviously, it only makes sense to call C<tree()> after calling C<parse()>.
 See scripts/traverse.pl for sample code which processes this tree's nodes.
 
 =head1 FAQ
+
+=head2 What are the differences between Text::Balanced::Marpa and Text::Delimited::Marpa?
+
+I think this is shown most clearly by getting the 2 modules to process the same string. So,
+using this as input:
+
+	'a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k'
+
+Output from Text::Balanced::Marpa's scripts/tiny.pl:
+
+	(#   2) |          1         2         3         4         5         6         7         8         9
+	        |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+	Parsing |Skip me ->a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k|. pos: 10. length: 42
+	Parse result: 0 (0 is success)
+	root. Attributes: {text => "", uid => "0"}
+	    |--- text. Attributes: {text => "a ", uid => "1"}
+	    |--- open. Attributes: {text => "<:", uid => "2"}
+	    |    |--- text. Attributes: {text => "b ", uid => "3"}
+	    |    |--- open. Attributes: {text => "<:", uid => "4"}
+	    |    |    |--- text. Attributes: {text => "c", uid => "5"}
+	    |    |--- close. Attributes: {text => ":>", uid => "6"}
+	    |    |--- text. Attributes: {text => " d", uid => "7"}
+	    |--- close. Attributes: {text => ":>", uid => "8"}
+	    |--- text. Attributes: {text => " e ", uid => "9"}
+	    |--- open. Attributes: {text => "<:", uid => "10"}
+	    |    |--- text. Attributes: {text => "f ", uid => "11"}
+	    |    |--- open. Attributes: {text => "<:", uid => "12"}
+	    |    |    |--- text. Attributes: {text => " g ", uid => "13"}
+	    |    |    |--- open. Attributes: {text => "<:", uid => "14"}
+	    |    |    |    |--- text. Attributes: {text => "h", uid => "15"}
+	    |    |    |--- close. Attributes: {text => ":>", uid => "16"}
+	    |    |    |--- text. Attributes: {text => " i", uid => "17"}
+	    |    |--- close. Attributes: {text => ":>", uid => "18"}
+	    |    |--- text. Attributes: {text => " j", uid => "19"}
+	    |--- close. Attributes: {text => ":>", uid => "20"}
+	    |--- text. Attributes: {text => " k", uid => "21"}
+
+Output from Text::Delimited::Marpa's scripts/tiny.pl:
+
+	(#   2) |          1         2         3         4         5         6         7         8         9
+	        |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+	Parsing |Skip me ->a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k|. pos: 10. length: 42
+	Parse result: 0 (0 is success)
+	root. Attributes: {end => "0", length => "0", start => "0", text => "", uid => "0"}
+	    |--- span. Attributes: {end => "22", length => "9", start => "14", text => "b <:c:> d", uid => "1"}
+	    |    |--- span. Attributes: {end => "18", length => "1", start => "18", text => "c", uid => "2"}
+	    |--- span. Attributes: {end => "47", length => "18", start => "30", text => "f <: g <:h:> i:> j", uid => "3"}
+	         |--- span. Attributes: {end => "43", length => "10", start => "34", text => " g <:h:> i", uid => "4"}
+	              |--- span. Attributes: {end => "39", length => "1", start => "39", text => "h", uid => "5"}
+
+Another example, using the same input string, but manually processing the tree nodes.
+Parent-daughter relationships are here represented by indentation.
+
+Output from Text::Balanced::Marpa's scripts/traverse.pl:
+
+	        |          1         2         3         4         5
+	        |012345678901234567890123456789012345678901234567890
+	Parsing |a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k|.
+	Span  Text
+	   1  |a |
+	   2  |<:|
+	   3    |b |
+	   4    |<:|
+	   5      |c|
+	   6    |:>|
+	   7    | d|
+	   8  |:>|
+	   9  | e |
+	  10  |<:|
+	  11    |f |
+	  12    |<:|
+	  13      | g |
+	  14      |<:|
+	  15        |h|
+	  16      |:>|
+	  17      | i|
+	  18    |:>|
+	  19    | j|
+	  20  |:>|
+	  21  | k|
+
+Output from Text::Delimited::Marpa's scripts/traverse.pl:
+
+	        |          1         2         3         4         5
+	        |012345678901234567890123456789012345678901234567890
+	Parsing |a <:b <:c:> d:> e <:f <: g <:h:> i:> j:> k|.
+	Span  Start  End  Length  Text
+	   1      4   12       9  |b <:c:> d|
+	   2      8    8       1    |c|
+	   3     20   37      18  |f <: g <:h:> i:> j|
+	   4     24   33      10    | g <:h:> i|
+	   5     29   29       1      |h|
 
 =head2 Where are the error messages and numbers described?
 
