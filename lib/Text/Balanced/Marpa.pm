@@ -603,6 +603,8 @@ sub _push_node_stack
 
 	push @$stack, $daughters[$#daughters];
 
+	$self -> node_stack($stack);
+
 } # End of _push_node_stack.
 
 # ------------------------------------------------
