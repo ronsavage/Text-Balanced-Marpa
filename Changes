@@ -1,5 +1,12 @@
 Revision history for Perl extension Text::Balanced::Marpa.
 
+1.05  2021-02-07T16:00:00
+	- Adopt new repo structure. See
+		http://savage.net.au/Ron/html/My.Workflow.for.Building.Distros.html.
+	- Update POD to change RT to github.
+	- Reformat Makefile.PL.
+	- Add t/00*.
+
 1.07  2015-01-20T09:27:00
 	- Remove redundant code.
 	- Greatly expand docs (e.g. FAQ) re differences between this module and its companion
