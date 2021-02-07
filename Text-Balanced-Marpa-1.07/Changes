@@ -36,7 +36,7 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Clean up docs.
 	- Add examples/jdurand.01.pl.
 
-1.02  2014-12-31T11:10:00
+1.02  2014-12-31 11:10:00
 	- Change the default value for text() from '' to \''. That was a typo fix.
 	- Add the length() and pos() mutators, to allow the user to control the call to the recognizer's
 		read() method. See the FAQ.
@@ -50,7 +50,7 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Comment explicitly all 'die's within the scope of try{} catch{}, and visa versa. This affects
 		how 'Error: ' is only added once to error messages being printed.
 
-1.01  2014-12-29T08:41:00
+1.01  2014-12-29 08:41:00
 	- Stop including the string 'Error: ' twice in error messages.
 	- Stop the option print_warnings from printing the tree. Leave that to the caller.
 	- Change docs to match.
@@ -60,5 +60,5 @@ Revision history for Perl extension Text::Balanced::Marpa.
 	- Clean up the docs.
 	- Rename t/parenthises.t to t/parentheses.t.
 
-1.00  2014-12-24T09:52:00
+1.00  2014-12-24 09:52:00
 	- Original version

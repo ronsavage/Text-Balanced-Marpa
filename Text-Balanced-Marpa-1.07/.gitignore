@@ -9,7 +9,6 @@ Build.bat
 .last_cover_stats
 /Makefile
 /Makefile.old
-/MANIFEST
 /MANIFEST.bak
 /META.yml
 /META.json
@@ -18,5 +17,3 @@ nytprof.out
 /pm_to_blib
 *.o
 *.bs
-/_eumm/
-/Text-Balanced-Marpa-
