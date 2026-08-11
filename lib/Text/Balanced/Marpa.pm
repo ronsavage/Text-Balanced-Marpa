@@ -843,7 +843,7 @@ sub _validate_open_close
 
 =head1 NAME
 
-C<Text::Balanced::Marpa> - Extract delimited text sequences from strings
+Text::Balanced::Marpa - Extract delimited text sequences from strings
 
 =head1 Synopsis
 
